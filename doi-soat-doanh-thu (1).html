@@ -1,0 +1,3467 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đối soát doanh thu · Pancake × Viettel Post × Facebook Ads</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #0F0E0C;
+    --surface: #181614;
+    --surface-2: #221F1B;
+    --border: #2E2A25;
+    --border-strong: #3F3A33;
+    --text: #F4EFE6;
+    --text-muted: #A39B8E;
+    --text-dim: #6D665C;
+    --accent: #E8B84A;
+    --accent-soft: #3A2E14;
+    --green: #7FB069;
+    --green-soft: #1F2E1A;
+    --red: #D76464;
+    --red-soft: #2E1818;
+    --blue: #6FA8DC;
+    --blue-soft: #1A2530;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Geist', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  .app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+
+  /* Sidebar */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 24px 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  .brand {
+    padding: 0 24px 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .brand-mark {
+    font-family: 'Fraunces', serif;
+    font-size: 24px;
+    font-weight: 500;
+    font-style: italic;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .brand-name {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 24px;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    font-size: 13px;
+    transition: all 0.15s;
+  }
+  .nav-item:hover { color: var(--text); background: var(--surface-2); }
+  .nav-item.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: var(--surface-2);
+  }
+  .nav-item .icon { width: 16px; height: 16px; opacity: 0.7; }
+  .nav-section { font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-dim); padding: 16px 24px 8px; }
+
+  /* Main */
+  .main { padding: 32px 40px; max-width: 100%; overflow-x: hidden; }
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .page-title {
+    font-family: 'Fraunces', serif;
+    font-size: 34px;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .page-subtitle { color: var(--text-muted); font-size: 13px; margin-top: 6px; }
+  .page-actions { display: flex; gap: 8px; }
+
+  /* Buttons */
+  .btn {
+    padding: 8px 16px;
+    border: 1px solid var(--border-strong);
+    background: transparent;
+    color: var(--text);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+  }
+  .btn:hover { background: var(--surface-2); border-color: var(--accent); }
+  .btn-primary {
+    background: var(--accent);
+    color: #1A1306;
+    border-color: var(--accent);
+    font-weight: 500;
+  }
+  .btn-primary:hover { background: #F0C45A; border-color: #F0C45A; }
+  .btn-ghost { border-color: transparent; padding: 8px 10px; }
+  .btn-ghost:hover { background: var(--surface-2); }
+  .btn-danger { color: var(--red); border-color: transparent; }
+  .btn-danger:hover { background: var(--red-soft); border-color: var(--red); }
+
+  /* KPI Cards */
+  .kpi-section-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    margin: 0 0 12px;
+    padding-left: 2px;
+  }
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+    opacity: 0.4;
+  }
+  .kpi-card.green::before { background: var(--green); }
+  .kpi-card.red::before { background: var(--red); }
+  .kpi-card.blue::before { background: var(--blue); }
+  .kpi-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+  .kpi-value {
+    font-family: 'Fraunces', serif;
+    font-size: 26px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+  }
+  .kpi-sub { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
+  .kpi-trend { font-size: 12px; margin-top: 8px; display: flex; align-items: center; gap: 4px; }
+  .kpi-trend.up { color: var(--green); }
+  .kpi-trend.down { color: var(--red); }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .card-title {
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .card-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left;
+    padding: 12px 14px;
+    background: var(--surface-2);
+    color: var(--text-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; font-family: 'Geist Mono', monospace; }
+  td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface-2); }
+
+  /* Total row - sticky at top of tbody, distinct styling */
+  tr.total-row td {
+    background: var(--surface-2);
+    border-top: 1px solid var(--accent);
+    border-bottom: 1px solid var(--accent);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    font-weight: 500;
+  }
+  tr.total-row:hover td { background: var(--accent-soft); }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .badge.success { background: var(--green-soft); color: var(--green); }
+  .badge.danger { background: var(--red-soft); color: var(--red); }
+  .badge.info { background: var(--blue-soft); color: var(--blue); }
+  .badge.warn { background: var(--accent-soft); color: var(--accent); }
+
+  /* Form */
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  .field input, .field select {
+    padding: 10px 12px;
+    border: 1px solid var(--border-strong);
+    background: var(--bg);
+    color: var(--text);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+
+  /* File drop */
+  .drop-zone {
+    border: 2px dashed var(--border-strong);
+    border-radius: 10px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .drop-zone:hover { border-color: var(--accent); background: var(--surface); }
+  .drop-zone.dragover { border-color: var(--accent); background: var(--accent-soft); }
+  .drop-zone-icon { font-size: 32px; color: var(--text-dim); margin-bottom: 12px; display: block; }
+  .drop-zone-title { font-size: 15px; margin-bottom: 4px; }
+  .drop-zone-hint { font-size: 12px; color: var(--text-muted); }
+
+  /* Chart */
+  .chart-wrap { height: 280px; position: relative; }
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 1000px) { .chart-grid { grid-template-columns: 1fr; } }
+
+  /* Tabs in pages */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* Empty state */
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+  }
+  .empty-title { font-family: 'Fraunces', serif; font-size: 22px; color: var(--text); margin-bottom: 8px; }
+
+  /* Number colors */
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+  .neutral { color: var(--text-muted); }
+
+  /* Pill filter */
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+  .pill {
+    padding: 6px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+  }
+  .pill.active { background: var(--accent); border-color: var(--accent); color: #1A1306; font-weight: 500; }
+
+  /* Reconciliation status */
+  .recon-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .recon-status::before {
+    content: "";
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text-dim);
+  }
+  .recon-status.match::before { background: var(--green); }
+  .recon-status.diff::before { background: var(--red); }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 14px 20px;
+    display: none;
+    z-index: 1000;
+    max-width: 360px;
+  }
+  .toast.show { display: block; animation: slideIn 0.2s ease; }
+  @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  /* Product row (for COGS entry) */
+  .product-row {
+    display: grid;
+    grid-template-columns: 1fr 160px 40px;
+    gap: 10px;
+    margin-bottom: 8px;
+    align-items: center;
+  }
+
+  /* Small text buttons */
+  .link { color: var(--accent); cursor: pointer; font-size: 12px; background: none; border: none; font-family: inherit; text-decoration: underline; }
+  .link:hover { color: #F0C45A; }
+
+  /* Date filter */
+  .date-range { display: flex; align-items: center; gap: 8px; }
+  .date-range input { padding: 6px 10px; font-size: 12px; }
+
+  /* Legend */
+  .legend { display: flex; gap: 16px; font-size: 12px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: var(--text-muted); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+  /* Info banner */
+  .banner {
+    background: var(--blue-soft);
+    border: 1px solid var(--blue);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: var(--text);
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .banner-icon { color: var(--blue); font-size: 16px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">Đối soát</div>
+      <div class="brand-name">Revenue Reconciliation</div>
+    </div>
+    <div class="nav-section">Báo cáo</div>
+    <div class="nav-item active" data-page="dashboard">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      Tổng quan
+    </div>
+    <div class="nav-item" data-page="daily">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Báo cáo theo ngày
+    </div>
+    <div class="nav-item" data-page="monthly">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="4" x2="9" y2="22"/><line x1="15" y1="4" x2="15" y2="22"/></svg>
+      Báo cáo theo tháng
+    </div>
+    <div class="nav-item" data-page="by-product">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      Báo cáo theo sản phẩm
+    </div>
+    <div class="nav-item" data-page="orders">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+      Chi tiết đơn hàng
+    </div>
+    <div class="nav-item" data-page="cod">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      Đối soát COD
+    </div>
+    <div class="nav-item" data-page="returns">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+      Báo cáo đơn hoàn
+    </div>
+    <div class="nav-item" data-page="partial">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><line x1="12" y1="22" x2="12" y2="12"/><line x1="3.27" y1="6.96" x2="12" y2="12.01"/></svg>
+      Đơn giao 1 phần
+    </div>
+    <div class="nav-section">Dữ liệu đầu vào</div>
+    <div class="nav-item" data-page="import">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Nhập dữ liệu
+    </div>
+    <div class="nav-item" data-page="products">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/></svg>
+      Sản phẩm & giá vốn
+    </div>
+    <div class="nav-item" data-page="ads">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-5v12L3 14v-3z"/></svg>
+      Chi phí quảng cáo
+    </div>
+    <div class="nav-item" data-page="fixed-costs">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Chi phí cố định
+    </div>
+    <div class="nav-section">Hệ thống</div>
+    <div class="nav-item" data-page="settings">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Cài đặt
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- PAGE: DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Tổng quan đối soát</div>
+          <div class="page-subtitle">Doanh thu, chi phí và lợi nhuận từ <span id="date-range-label">7 ngày gần nhất</span></div>
+        </div>
+        <div class="page-actions">
+          <div class="date-range">
+            <input type="date" id="date-from">
+            <span style="color: var(--text-dim);">—</span>
+            <input type="date" id="date-to">
+          </div>
+          <button class="btn" onclick="refreshData()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Làm mới
+          </button>
+        </div>
+      </div>
+
+      <div class="banner">
+        <span class="banner-icon">ⓘ</span>
+        <div>
+          <strong>Đang xem dữ liệu mẫu.</strong> Vào mục "Nhập dữ liệu" để upload CSV từ Pancake và Viettel Post, hoặc bấm "Làm mới" để giả lập đồng bộ tự động. Tương lai có thể kết nối API để tự cập nhật.
+        </div>
+      </div>
+
+      <!-- KPIs - Tài chính -->
+      <div class="kpi-section-label">Tài chính</div>
+      <div class="kpi-grid">
+        <div class="kpi-card blue">
+          <div class="kpi-label">Doanh thu Pancake</div>
+          <div class="kpi-value" id="kpi-revenue-total">—</div>
+          <div class="kpi-sub">Tổng giá trị đơn tạo</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Doanh thu thực tế</div>
+          <div class="kpi-value" id="kpi-revenue-actual">—</div>
+          <div class="kpi-sub">Đã thu từ đơn giao thành công</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Chi phí quảng cáo</div>
+          <div class="kpi-value" id="kpi-ads">—</div>
+          <div class="kpi-sub">ROAS: <span id="kpi-roas">—</span></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Chi phí cố định</div>
+          <div class="kpi-value" id="kpi-fixed-cost">—</div>
+          <div class="kpi-sub">Phân bổ từ kho, lương, ...</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Tổng chi phí</div>
+          <div class="kpi-value" id="kpi-cost-total">—</div>
+          <div class="kpi-sub">Gồm cả chi phí cố định</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Lợi nhuận gộp</div>
+          <div class="kpi-value" id="kpi-gross-profit">—</div>
+          <div class="kpi-sub">Chưa trừ chi phí cố định</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Lợi nhuận ròng</div>
+          <div class="kpi-value" id="kpi-profit">—</div>
+          <div class="kpi-sub">Biên: <span id="kpi-margin">—</span></div>
+        </div>
+      </div>
+
+      <!-- KPIs - Đơn hàng -->
+      <div class="kpi-section-label">Đơn hàng</div>
+      <div class="kpi-grid">
+        <div class="kpi-card blue">
+          <div class="kpi-label">Tổng đơn Pancake</div>
+          <div class="kpi-value" id="kpi-orders-total">—</div>
+          <div class="kpi-sub">Đơn đã tạo trên Pancake</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Đã bắn sang VTP</div>
+          <div class="kpi-value" id="kpi-orders-sent">—</div>
+          <div class="kpi-sub"><span id="kpi-sent-rate">—</span> của tổng đơn</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Đang giao</div>
+          <div class="kpi-value" id="kpi-orders-shipping">—</div>
+          <div class="kpi-sub">Chưa có kết quả giao</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Giao thành công</div>
+          <div class="kpi-value" id="kpi-orders-success">—</div>
+          <div class="kpi-sub">Tỉ lệ: <span id="kpi-success-rate">—</span></div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Hoàn / không TC</div>
+          <div class="kpi-value" id="kpi-orders-returned">—</div>
+          <div class="kpi-sub">Gồm hoàn, giao 1 phần, thất bại</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Đơn hủy</div>
+          <div class="kpi-value" id="kpi-orders-cancelled">—</div>
+          <div class="kpi-sub">Hủy trước khi giao</div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="chart-grid">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Doanh thu theo ngày</div>
+              <div class="card-subtitle">So sánh Pancake (tạo) và thực tế (đã giao)</div>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-revenue"></canvas></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Trạng thái đơn hàng</div>
+              <div class="card-subtitle">Tỉ lệ theo trạng thái vận chuyển</div>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-status"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Lợi nhuận & chi phí</div>
+            <div class="card-subtitle">Phân bổ chi phí và lợi nhuận ròng theo ngày</div>
+          </div>
+        </div>
+        <div class="chart-wrap" style="height: 320px;"><canvas id="chart-profit"></canvas></div>
+      </div>
+    </div>
+
+    <!-- PAGE: DAILY REPORT -->
+    <div class="page" id="page-daily">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Báo cáo theo ngày</div>
+          <div class="page-subtitle">Bảng tổng hợp chi tiết — có thể xuất ra Excel</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn" onclick="exportCSV()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Xuất CSV
+          </button>
+        </div>
+      </div>
+
+      <div class="card" style="padding: 0;">
+        <div class="table-wrap">
+          <table id="daily-table">
+            <thead>
+              <tr>
+                <th rowspan="2" style="vertical-align: middle;">Ngày</th>
+                <th colspan="7" style="text-align: center; border-left: 1px solid var(--border); border-right: 1px solid var(--border); background: rgba(111,168,220,0.08);">Số lượng đơn</th>
+                <th colspan="2" style="text-align: center; border-right: 1px solid var(--border); background: rgba(127,176,105,0.08);">Doanh thu</th>
+                <th colspan="5" style="text-align: center; border-right: 1px solid var(--border); background: rgba(215,100,100,0.08);">Chi phí</th>
+                <th colspan="3" style="text-align: center; background: rgba(232,184,74,0.08);">Hiệu quả</th>
+              </tr>
+              <tr>
+                <th class="num" style="border-left: 1px solid var(--border);">Tạo</th>
+                <th class="num">Đã bắn VTP</th>
+                <th class="num">Đang giao</th>
+                <th class="num">Thành công</th>
+                <th class="num">Hoàn</th>
+                <th class="num">Giao 1 phần</th>
+                <th class="num" style="border-right: 1px solid var(--border);">Hủy</th>
+                <th class="num">DT Pancake</th>
+                <th class="num" style="border-right: 1px solid var(--border);">DT thực tế</th>
+                <th class="num">Chi phí ads</th>
+                <th class="num">Giá vốn</th>
+                <th class="num">Phí ship</th>
+                <th class="num">Phí hoàn</th>
+                <th class="num" style="border-right: 1px solid var(--border);">CP cố định</th>
+                <th class="num">Lợi nhuận</th>
+                <th class="num">Tỉ lệ TC</th>
+                <th class="num">ROAS</th>
+              </tr>
+            </thead>
+            <tbody id="daily-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: ORDERS DETAIL -->
+    <div class="page" id="page-orders">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Chi tiết đơn hàng</div>
+          <div class="page-subtitle">Đối soát từng đơn giữa Pancake và Viettel Post</div>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <button class="pill active" data-filter="all">Tất cả</button>
+        <button class="pill" data-filter="sent">Đã bắn VTP</button>
+        <button class="pill" data-filter="shipping">Đang giao</button>
+        <button class="pill" data-filter="success">Giao thành công</button>
+        <button class="pill" data-filter="returned">Hoàn hàng</button>
+        <button class="pill" data-filter="failed">Giao không TC</button>
+        <button class="pill" data-filter="partial">Giao 1 phần</button>
+        <button class="pill" data-filter="cancelled">Hủy</button>
+        <button class="pill" data-filter="mismatch">⚠ Lệch đối soát</button>
+      </div>
+
+      <div class="card" style="padding: 0;">
+        <div class="table-wrap">
+          <table id="orders-table">
+            <thead>
+              <tr>
+                <th>Mã đơn</th>
+                <th>Ngày tạo</th>
+                <th>Khách hàng</th>
+                <th>Sản phẩm</th>
+                <th class="num">DT Pancake</th>
+                <th>Trạng thái VTP</th>
+                <th class="num">DT thực tế</th>
+                <th class="num">Giá vốn</th>
+                <th class="num">Phí ship</th>
+                <th class="num">Lãi / đơn</th>
+                <th>Đối soát</th>
+              </tr>
+            </thead>
+            <tbody id="orders-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: IMPORT -->
+    <div class="page" id="page-import">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Nhập dữ liệu</div>
+          <div class="page-subtitle">Upload file CSV/Excel hoặc giả lập đồng bộ</div>
+        </div>
+      </div>
+
+      <div class="banner">
+        <span class="banner-icon">ⓘ</span>
+        <div>
+          <strong>Ghi chú về tự động hóa:</strong> Bản demo này chỉ upload file thủ công. Để tự động đồng bộ theo lịch hoặc khi bấm "Làm mới", cần kết nối API Pancake và Viettel Post — việc này yêu cầu server/backend nhỏ. Mình sẽ hướng dẫn sau khi bạn đã quen với cấu trúc báo cáo.
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Từ Pancake</div>
+              <div class="card-subtitle">File đơn hàng .csv xuất từ Pancake</div>
+            </div>
+          </div>
+          <div class="drop-zone" onclick="document.getElementById('file-pancake').click()">
+            <span class="drop-zone-icon">⬆</span>
+            <div class="drop-zone-title">Kéo file vào đây hoặc bấm để chọn</div>
+            <div class="drop-zone-hint">CSV · Excel · TXT</div>
+            <input type="file" id="file-pancake" accept=".csv,.xlsx,.txt" style="display: none;">
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Từ Viettel Post</div>
+              <div class="card-subtitle">File Excel "Danh sách vận đơn" tải từ partner.viettelpost.vn</div>
+            </div>
+          </div>
+          <div class="drop-zone" id="vtp-drop-zone" onclick="document.getElementById('file-vtp').click()">
+            <span class="drop-zone-icon">⬆</span>
+            <div class="drop-zone-title">Kéo file Excel VTP vào đây hoặc bấm để chọn</div>
+            <div class="drop-zone-hint">.xlsx — file xuất từ "Quản lý vận đơn" → "Xuất Excel"</div>
+            <input type="file" id="file-vtp" accept=".xlsx,.xls" style="display: none;">
+          </div>
+          <div id="vtp-upload-result" style="margin-top: 14px; display: none;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Thao tác nhanh</div>
+            <div class="card-subtitle">Reset hoặc tái tạo dữ liệu mẫu</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="btn btn-primary" onclick="generateSampleData()">Tạo dữ liệu mẫu 14 ngày</button>
+          <button class="btn" onclick="refreshData()">Giả lập đồng bộ (làm mới)</button>
+          <button class="btn btn-danger" onclick="resetAll()">Xóa tất cả dữ liệu</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: PRODUCTS -->
+    <div class="page" id="page-products">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Sản phẩm & giá vốn</div>
+          <div class="page-subtitle">Đồng bộ tự động từ Pancake · Tổng <span id="product-count">0</span> sản phẩm</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn" onclick="refreshData()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Đồng bộ từ Pancake
+          </button>
+        </div>
+      </div>
+
+      <div class="banner">
+        <span class="banner-icon">ⓘ</span>
+        <div>
+          Danh sách sản phẩm <strong>đồng bộ tự động từ Pancake</strong> khi bạn bấm "Làm mới" ở trang tổng quan. Chỉ có thể chỉnh tay cột <strong>giá vốn</strong> trong trường hợp Pancake chưa cập nhật — các cột khác (tên, mã, giá bán) sẽ bị ghi đè ở lần đồng bộ tiếp theo.
+        </div>
+      </div>
+
+      <div class="card" style="padding: 0;">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Mã SP</th>
+                <th>Tên sản phẩm</th>
+                <th class="num">Giá bán</th>
+                <th class="num">Giá vốn</th>
+                <th>Nguồn</th>
+                <th class="num">Đã bán (30d)</th>
+              </tr>
+            </thead>
+            <tbody id="product-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: ADS -->
+    <div class="page" id="page-ads">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Chi phí quảng cáo</div>
+          <div class="page-subtitle">Upload file báo cáo từ Facebook Ads Manager</div>
+        </div>
+      </div>
+
+      <div class="banner">
+        <span class="banner-icon">ⓘ</span>
+        <div>
+          <strong>Cách lấy file từ Facebook:</strong> Vào <em>Ads Manager → Reports → Export → Export as .csv</em>. File cần có ít nhất 2 cột: <strong>Day / Ngày</strong> và <strong>Amount spent / Số tiền đã chi tiêu</strong>. Có thể có thêm cột <strong>Results / Purchases</strong> (số đơn) nếu đã cài pixel.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Upload báo cáo Facebook Ads</div>
+            <div class="card-subtitle">Kéo file .csv xuất từ Ads Manager vào đây</div>
+          </div>
+        </div>
+        <div class="drop-zone" onclick="document.getElementById('file-fb-ads').click()" id="fb-drop-zone">
+          <span class="drop-zone-icon">⬆</span>
+          <div class="drop-zone-title">Kéo file Facebook Ads vào đây hoặc bấm để chọn</div>
+          <div class="drop-zone-hint">CSV · XLSX · XLS</div>
+          <input type="file" id="file-fb-ads" accept=".csv,.xlsx,.xls" style="display: none;">
+        </div>
+      </div>
+
+      <div class="card" style="padding: 0;">
+        <div class="card-header" style="padding: 18px 24px 12px;">
+          <div>
+            <div class="card-title">Chi phí quảng cáo theo ngày</div>
+            <div class="card-subtitle">Có thể chỉnh tay từng ô nếu cần</div>
+          </div>
+        </div>
+        <div class="table-wrap" style="border-top: 1px solid var(--border);">
+          <table>
+            <thead>
+              <tr>
+                <th>Ngày</th>
+                <th class="num">Chi phí ads</th>
+                <th class="num">Số đơn từ ads</th>
+                <th class="num">CPO (chi phí/đơn)</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="ads-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: MONTHLY REPORT -->
+    <div class="page" id="page-monthly">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Báo cáo theo tháng</div>
+          <div class="page-subtitle">Tổng hợp cho mục đích thuế, lương, kế toán</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn" onclick="exportMonthlyCSV()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Xuất CSV
+          </button>
+        </div>
+      </div>
+      <div class="card" style="padding: 0;">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th rowspan="2" style="vertical-align: middle;">Tháng</th>
+                <th colspan="4" style="text-align: center; border-left: 1px solid var(--border); border-right: 1px solid var(--border); background: rgba(111,168,220,0.08);">Số lượng đơn</th>
+                <th colspan="2" style="text-align: center; border-right: 1px solid var(--border); background: rgba(127,176,105,0.08);">Doanh thu</th>
+                <th colspan="5" style="text-align: center; border-right: 1px solid var(--border); background: rgba(215,100,100,0.08);">Chi phí</th>
+                <th colspan="3" style="text-align: center; background: rgba(232,184,74,0.08);">Hiệu quả</th>
+              </tr>
+              <tr>
+                <th class="num" style="border-left: 1px solid var(--border);">Tạo</th>
+                <th class="num">Thành công</th>
+                <th class="num">Hoàn/KTC</th>
+                <th class="num" style="border-right: 1px solid var(--border);">Hủy</th>
+                <th class="num">DT Pancake</th>
+                <th class="num" style="border-right: 1px solid var(--border);">DT thực tế</th>
+                <th class="num">Ads</th>
+                <th class="num">Giá vốn</th>
+                <th class="num">Phí ship</th>
+                <th class="num">Phí hoàn</th>
+                <th class="num" style="border-right: 1px solid var(--border);">CP cố định</th>
+                <th class="num">Lợi nhuận</th>
+                <th class="num">Tỉ lệ TC</th>
+                <th class="num">Biên LN</th>
+              </tr>
+            </thead>
+            <tbody id="monthly-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: BY PRODUCT -->
+    <div class="page" id="page-by-product">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Báo cáo theo sản phẩm</div>
+          <div class="page-subtitle">Sản phẩm nào bán chạy, sản phẩm nào lãi nhất, sản phẩm nào tỉ lệ hoàn cao</div>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <span style="font-size: 12px; color: var(--text-muted); margin-right: 8px;">Sắp xếp theo:</span>
+        <button class="pill active" data-sort="profit">Lợi nhuận cao nhất</button>
+        <button class="pill" data-sort="revenue">Doanh thu cao nhất</button>
+        <button class="pill" data-sort="qty">Bán nhiều nhất</button>
+        <button class="pill" data-sort="returnRate">Tỉ lệ hoàn cao nhất</button>
+        <button class="pill" data-sort="margin">Biên LN cao nhất</button>
+      </div>
+
+      <div class="card" style="padding: 0;">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Mã</th>
+                <th>Sản phẩm</th>
+                <th class="num">Giá bán</th>
+                <th class="num">Giá vốn</th>
+                <th class="num">SL bán</th>
+                <th class="num">Đơn TC</th>
+                <th class="num">Đơn hoàn</th>
+                <th class="num">Tỉ lệ hoàn</th>
+                <th class="num">DT thực tế</th>
+                <th class="num">Giá vốn đã dùng</th>
+                <th class="num">Lãi gộp</th>
+                <th class="num">Biên LN</th>
+              </tr>
+            </thead>
+            <tbody id="byproduct-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="chart-grid" style="margin-top: 20px;">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Top 5 sản phẩm theo lãi gộp</div>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-top-profit"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Tỉ lệ hoàn theo sản phẩm</div>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-return-rate"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: RETURNS -->
+    <div class="page" id="page-returns">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Báo cáo đơn hoàn</div>
+          <div class="page-subtitle">Đơn giao không thành công và đơn giao 1 phần · Kiểm tra hàng đã về kho chưa</div>
+        </div>
+      </div>
+
+      <div class="banner">
+        <span class="banner-icon">ⓘ</span>
+        <div>
+          Trạng thái hoàn (<strong>Đã hoàn / Đang hoàn</strong>) sẽ tự cập nhật từ API Viettel Post khi kết nối. Trạng thái <strong>Đã về kho / Chưa về kho</strong> do bạn đánh dấu thủ công bằng cách dán danh sách mã đơn ở mục bên dưới.
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-grid" style="margin-bottom: 20px;">
+        <div class="kpi-card red">
+          <div class="kpi-label">Tổng đơn hoàn</div>
+          <div class="kpi-value" id="return-total">—</div>
+          <div class="kpi-sub">Hoàn + giao 1 phần</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Đơn hoàn (KTC)</div>
+          <div class="kpi-value" id="return-failed">—</div>
+          <div class="kpi-sub">Giao không thành công</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Giao 1 phần</div>
+          <div class="kpi-value" id="return-partial">—</div>
+          <div class="kpi-sub">Nhận 1 phần, trả 1 phần</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Đã về kho</div>
+          <div class="kpi-value" id="return-received">—</div>
+          <div class="kpi-sub">Đã kiểm tra hàng</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Chưa về kho</div>
+          <div class="kpi-value" id="return-pending">—</div>
+          <div class="kpi-sub">Cần theo dõi</div>
+        </div>
+      </div>
+
+      <!-- Bulk input for received codes -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Cập nhật đơn đã về kho</div>
+            <div class="card-subtitle">Dán danh sách mã đơn (mỗi mã 1 dòng hoặc cách nhau dấu phẩy/khoảng trắng) rồi bấm "Cập nhật"</div>
+          </div>
+        </div>
+        <textarea id="bulk-received-input" placeholder="PO10001&#10;PO10002&#10;PO10003&#10;...&#10;&#10;Hoặc: PO10001, PO10002, PO10003" style="width: 100%; min-height: 100px; padding: 12px; background: var(--bg); color: var(--text); border: 1px solid var(--border-strong); border-radius: 6px; font-family: 'Geist Mono', monospace; font-size: 13px; resize: vertical;"></textarea>
+        <div style="display: flex; gap: 10px; margin-top: 12px;">
+          <button class="btn btn-primary" onclick="applyBulkReceived()">Cập nhật đơn về kho</button>
+          <button class="btn" onclick="document.getElementById('bulk-received-input').value=''">Xóa ô nhập</button>
+        </div>
+        <div id="bulk-result" style="margin-top: 12px; display: none;"></div>
+      </div>
+
+      <!-- Filter pills -->
+      <div class="filter-bar" style="margin-top: 20px;">
+        <button class="pill active" data-return-filter="all">Tất cả</button>
+        <button class="pill" data-return-filter="not-received">Chưa về kho</button>
+        <button class="pill" data-return-filter="received">Đã về kho</button>
+        <button class="pill" data-return-filter="failed">Đơn hoàn</button>
+        <button class="pill" data-return-filter="partial">Giao 1 phần</button>
+        <button class="pill" data-return-filter="returning">Đang hoàn</button>
+        <button class="pill" data-return-filter="returned">Đã hoàn</button>
+      </div>
+
+      <!-- Returns table -->
+      <div class="card" style="padding: 0;">
+        <div style="padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+          <div style="font-size: 13px; color: var(--text-muted);">
+            Đang hiển thị <strong id="returns-shown-count" style="color: var(--accent);">0</strong> đơn
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 48px;">STT</th>
+                <th>Mã đơn</th>
+                <th>Ngày tạo</th>
+                <th>Khách hàng</th>
+                <th>Sản phẩm</th>
+                <th class="num">Giá trị</th>
+                <th>Loại</th>
+                <th>Trạng thái VTP</th>
+                <th>Về kho</th>
+              </tr>
+            </thead>
+            <tbody id="returns-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Unknown codes (codes pasted but not matching any return order) -->
+      <div class="card" id="unknown-codes-card" style="margin-top: 20px; display: none; border-color: var(--red);">
+        <div class="card-header">
+          <div>
+            <div class="card-title" style="color: var(--red);">⚠ Mã không có trong danh sách đơn hoàn</div>
+            <div class="card-subtitle">Các mã bạn đã dán nhưng không khớp với bất kỳ đơn hoàn nào</div>
+          </div>
+          <button class="btn" onclick="clearUnknownCodes()">Xóa danh sách này</button>
+        </div>
+        <div id="unknown-codes-list" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+      </div>
+    </div>
+
+    <!-- PAGE: PARTIAL ORDERS -->
+    <div class="page" id="page-partial">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Đơn giao 1 phần</div>
+          <div class="page-subtitle">Khách chỉ lấy 1 phần đơn hàng · Cần nhập giá vốn để tính lợi nhuận chính xác</div>
+        </div>
+      </div>
+
+      <div class="banner">
+        <span class="banner-icon">ⓘ</span>
+        <div>
+          App tự phát hiện đơn giao 1 phần từ VTP qua <strong>3 cách</strong>: (1) có đơn hoàn về kèm theo, (2) lịch sử đơn có ghi "yêu cầu giao 1 phần", (3) tiền COD thu thực < 95% giá trị đơn. Nếu BẤT KỲ điều kiện nào đúng → đánh dấu là giao 1 phần, dù VTP báo "giao thành công".
+        </div>
+      </div>
+
+      <div class="kpi-grid" style="margin-bottom: 20px;">
+        <div class="kpi-card warn">
+          <div class="kpi-label">Tổng đơn 1 phần</div>
+          <div class="kpi-value" id="partial-total">—</div>
+          <div class="kpi-sub">Đơn được phát hiện</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-label">Giá trị đơn gốc</div>
+          <div class="kpi-value" id="partial-original-value">—</div>
+          <div class="kpi-sub">Tổng tiền đơn ban đầu</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Tiền thu hộ thực</div>
+          <div class="kpi-value" id="partial-collected">—</div>
+          <div class="kpi-sub">VTP đã thu được</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Tiền không thu được</div>
+          <div class="kpi-value" id="partial-loss">—</div>
+          <div class="kpi-sub">Đơn gốc - thực thu</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Cần nhập giá vốn</div>
+          <div class="kpi-value" id="partial-need-cogs">—</div>
+          <div class="kpi-sub">Đơn chưa có giá vốn</div>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <button class="pill active" data-partial-filter="all">Tất cả</button>
+        <button class="pill" data-partial-filter="need-cogs">Cần nhập giá vốn</button>
+        <button class="pill" data-partial-filter="cod-fixed">COD đã sửa trên VTP</button>
+        <button class="pill" data-partial-filter="cod-not-fixed">COD chưa sửa (cần kiểm tra)</button>
+      </div>
+
+      <div class="card" style="padding: 0;">
+        <div style="padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+          <div style="font-size: 13px; color: var(--text-muted);">
+            Đang hiển thị <strong id="partial-shown-count" style="color: var(--accent);">0</strong> đơn
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 48px;">STT</th>
+                <th>Mã đơn</th>
+                <th>Ngày tạo</th>
+                <th>Sản phẩm gốc</th>
+                <th class="num">Giá trị gốc</th>
+                <th class="num">COD thu thực</th>
+                <th class="num">Giá vốn (nhập tay)</th>
+                <th class="num">Lãi/Lỗ</th>
+                <th>Cách phát hiện</th>
+              </tr>
+            </thead>
+            <tbody id="partial-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: COD RECONCILIATION -->
+    <div class="page" id="page-cod">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Đối soát COD</div>
+          <div class="page-subtitle">Các phiên chuyển tiền từ Viettel Post về tài khoản</div>
+        </div>
+      </div>
+
+      <div class="banner">
+        <span class="banner-icon">ⓘ</span>
+        <div>
+          Viettel Post gom tiền COD của nhiều đơn vào các <strong>phiên chuyển tiền</strong> (thường 1-3 ngày/phiên) rồi chuyển khoản 1 lần. Danh sách phiên sẽ tự đồng bộ từ API VTP khi kết nối. Mỗi phiên có ngày, tổng tiền và danh sách các đơn kèm theo.
+        </div>
+      </div>
+
+      <div class="kpi-grid" style="margin-bottom: 20px;">
+        <div class="kpi-card green">
+          <div class="kpi-label">Đã chuyển</div>
+          <div class="kpi-value" id="payout-received">—</div>
+          <div class="kpi-sub"><span id="payout-received-count">0</span> phiên</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Đang xử lý</div>
+          <div class="kpi-value" id="payout-processing">—</div>
+          <div class="kpi-sub"><span id="payout-processing-count">0</span> phiên chờ chuyển</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-label">Tổng phiên</div>
+          <div class="kpi-value" id="payout-total-count">—</div>
+          <div class="kpi-sub">Từ trước tới nay</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Tổng giá trị</div>
+          <div class="kpi-value" id="payout-total-value">—</div>
+          <div class="kpi-sub">Đã + đang chuyển</div>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <button class="pill active" data-cod-filter="all">Tất cả</button>
+        <button class="pill" data-cod-filter="processing">Đang xử lý</button>
+        <button class="pill" data-cod-filter="received">Đã chuyển</button>
+      </div>
+
+      <div class="card" style="padding: 0;">
+        <div style="padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+          <div style="font-size: 13px; color: var(--text-muted);">
+            Đang hiển thị <strong id="payouts-shown-count" style="color: var(--accent);">0</strong> phiên
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 48px;">STT</th>
+                <th>Mã phiên</th>
+                <th>Ngày phiên</th>
+                <th class="num">Số đơn</th>
+                <th class="num">Tổng COD</th>
+                <th>Trạng thái</th>
+                <th>Ngày nhận TK</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="payouts-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: FIXED COSTS -->
+    <div class="page" id="page-fixed-costs">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Chi phí cố định</div>
+          <div class="page-subtitle">Thuê kho, lương nhân viên, điện nước, bao bì, marketing tools...</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-primary" onclick="addFixedCost()">+ Thêm khoản chi</button>
+        </div>
+      </div>
+
+      <div class="banner">
+        <span class="banner-icon">ⓘ</span>
+        <div>
+          Chi phí cố định sẽ được <strong>phân bổ đều theo ngày</strong> trong kỳ được chọn ở dashboard, để trừ vào lợi nhuận thực. Ví dụ: thuê kho 3 triệu/tháng → phân bổ ~100k/ngày.
+        </div>
+      </div>
+
+      <div class="card" style="padding: 0;">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Tên khoản chi</th>
+                <th class="num">Số tiền</th>
+                <th>Chu kỳ</th>
+                <th>Ghi chú</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="fixed-costs-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 20px;">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Tổng chi phí cố định</div>
+            <div class="card-subtitle">Quy về mức hàng tháng và hàng ngày</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 40px; align-items: baseline;">
+          <div>
+            <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em;">Hàng tháng</div>
+            <div style="font-family: 'Fraunces', serif; font-size: 28px; font-weight: 500;" id="fixed-monthly">—</div>
+          </div>
+          <div>
+            <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em;">Hàng ngày</div>
+            <div style="font-family: 'Fraunces', serif; font-size: 28px; font-weight: 500;" id="fixed-daily">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: SETTINGS -->
+    <div class="page" id="page-settings">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Cài đặt</div>
+          <div class="page-subtitle">Cấu hình chung</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Đơn vị & hiển thị</div>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Đơn vị tiền tệ</label>
+            <select id="setting-currency">
+              <option value="VND">VND (₫)</option>
+              <option value="USD">USD ($)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Định dạng số</label>
+            <select>
+              <option>1.234.567 (Việt Nam)</option>
+              <option>1,234,567 (Quốc tế)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Kết nối (sắp ra mắt)</div>
+            <div class="card-subtitle">Tự động đồng bộ dữ liệu từ Pancake, Viettel Post, Facebook Ads</div>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label>API Key Pancake</label>
+            <input type="password" placeholder="Chưa kết nối" disabled>
+          </div>
+          <div class="field">
+            <label>API Key Viettel Post</label>
+            <input type="password" placeholder="Chưa kết nối" disabled>
+          </div>
+          <div class="field">
+            <label>Token Facebook Ads</label>
+            <input type="password" placeholder="Chưa kết nối" disabled>
+          </div>
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Sao lưu & khôi phục dữ liệu</div>
+            <div class="card-subtitle">Tải toàn bộ dữ liệu về máy hoặc khôi phục từ file backup</div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div style="padding: 16px; border: 1px solid var(--border); border-radius: 8px;">
+            <div style="font-size: 14px; font-weight: 500; margin-bottom: 6px;">📥 Sao lưu</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Tải file <code style="font-family: 'Geist Mono', monospace; font-size: 11px;">backup.json</code> chứa tất cả: đơn hàng, sản phẩm, ads, chi phí cố định, đối soát COD, đơn hoàn về kho</div>
+            <button class="btn btn-primary" onclick="downloadBackup()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Tải file backup
+            </button>
+          </div>
+
+          <div style="padding: 16px; border: 1px solid var(--border); border-radius: 8px;">
+            <div style="font-size: 14px; font-weight: 500; margin-bottom: 6px;">📤 Khôi phục</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Chọn file <code style="font-family: 'Geist Mono', monospace; font-size: 11px;">backup.json</code> đã lưu trước đó. Dữ liệu hiện tại sẽ bị ghi đè.</div>
+            <input type="file" id="restore-file" accept=".json" style="display: none;">
+            <button class="btn" onclick="document.getElementById('restore-file').click()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Chọn file backup
+            </button>
+          </div>
+        </div>
+
+        <div style="margin-top: 14px; padding: 12px 14px; background: var(--blue-soft); border-radius: 6px; font-size: 12px; color: var(--text-muted); display: flex; gap: 10px;">
+          <span style="color: var(--blue);">💡</span>
+          <div><strong style="color: var(--text);">Khuyến nghị:</strong> Sao lưu trước mỗi lần cập nhật code mới, hoặc đặt lịch backup hàng tuần. File chỉ vài chục KB, có thể lưu vào Google Drive / Zalo cho an toàn.</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================================
+// STATE & STORAGE
+// ============================================================================
+const state = {
+  products: [],
+  orders: [],
+  ads: [],
+  fixedCosts: [],
+  codReceived: {},
+  payouts: [],
+  returnsReceived: {},
+  unknownCodes: [],
+  partialCogs: {},
+  dateFrom: null,
+  dateTo: null,
+  orderFilter: 'all',
+  productSort: 'profit',
+  codFilter: 'all',
+  returnFilter: 'all',
+  partialFilter: 'all'
+};
+
+function fmt(n) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return Math.round(n).toLocaleString('vi-VN') + '₫';
+}
+function fmtShort(n) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  if (Math.abs(n) >= 1e9) return (n/1e9).toFixed(1) + 'B₫';
+  if (Math.abs(n) >= 1e6) return (n/1e6).toFixed(1) + 'M₫';
+  if (Math.abs(n) >= 1e3) return (n/1e3).toFixed(0) + 'K₫';
+  return Math.round(n) + '₫';
+}
+function fmtPct(n) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return n.toFixed(1) + '%';
+}
+function fmtDate(d) {
+  const dt = new Date(d);
+  return dt.getDate().toString().padStart(2,'0') + '/' + (dt.getMonth()+1).toString().padStart(2,'0');
+}
+
+async function loadState() {
+  try {
+    const products = localStorage.getItem('doi-soat-products');
+    if (products) state.products = JSON.parse(products);
+  } catch(e) {}
+  try {
+    const orders = localStorage.getItem('doi-soat-orders');
+    if (orders) state.orders = JSON.parse(orders);
+  } catch(e) {}
+  try {
+    const ads = localStorage.getItem('doi-soat-ads');
+    if (ads) state.ads = JSON.parse(ads);
+  } catch(e) {}
+  try {
+    const fc = localStorage.getItem('doi-soat-fixed-costs');
+    if (fc) state.fixedCosts = JSON.parse(fc);
+  } catch(e) {}
+  try {
+    const cod = localStorage.getItem('doi-soat-cod');
+    if (cod) state.codReceived = JSON.parse(cod);
+  } catch(e) {}
+  try {
+    const po = localStorage.getItem('doi-soat-payouts');
+    if (po) state.payouts = JSON.parse(po);
+  } catch(e) {}
+  try {
+    const rr = localStorage.getItem('doi-soat-returns-received');
+    if (rr) state.returnsReceived = JSON.parse(rr);
+  } catch(e) {}
+  try {
+    const uc = localStorage.getItem('doi-soat-unknown-codes');
+    if (uc) state.unknownCodes = JSON.parse(uc);
+  } catch(e) {}
+  try {
+    const pc = localStorage.getItem('doi-soat-partial-cogs');
+    if (pc) state.partialCogs = JSON.parse(pc);
+  } catch(e) {}
+
+  if (state.products.length === 0 && state.orders.length === 0) {
+    generateSampleData(true);
+  }
+  if (state.fixedCosts.length === 0) {
+    state.fixedCosts = [
+      { id: 'fc1', name: 'Thuê kho', amount: 3000000, cycle: 'monthly', note: 'Kho 30m² quận 7' },
+      { id: 'fc2', name: 'Lương nhân viên đóng gói', amount: 5000000, cycle: 'monthly', note: '1 nhân viên full-time' },
+      { id: 'fc3', name: 'Điện nước', amount: 500000, cycle: 'monthly', note: '' },
+      { id: 'fc4', name: 'Bao bì đóng gói', amount: 800000, cycle: 'monthly', note: 'Hộp, băng keo, túi' },
+    ];
+  }
+}
+
+async function saveState() {
+  try { localStorage.setItem('doi-soat-products', JSON.stringify(state.products)); } catch(e){}
+  try { localStorage.setItem('doi-soat-orders', JSON.stringify(state.orders)); } catch(e){}
+  try { localStorage.setItem('doi-soat-ads', JSON.stringify(state.ads)); } catch(e){}
+  try { localStorage.setItem('doi-soat-fixed-costs', JSON.stringify(state.fixedCosts)); } catch(e){}
+  try { localStorage.setItem('doi-soat-cod', JSON.stringify(state.codReceived)); } catch(e){}
+  try { localStorage.setItem('doi-soat-payouts', JSON.stringify(state.payouts)); } catch(e){}
+  try { localStorage.setItem('doi-soat-returns-received', JSON.stringify(state.returnsReceived)); } catch(e){}
+  try { localStorage.setItem('doi-soat-unknown-codes', JSON.stringify(state.unknownCodes)); } catch(e){}
+  try { localStorage.setItem('doi-soat-partial-cogs', JSON.stringify(state.partialCogs)); } catch(e){}
+}
+
+// ============================================================================
+// SAMPLE DATA
+// ============================================================================
+function generateSampleData(silent) {
+  const sampleProducts = [
+    { id: 'P001', name: 'Áo thun nam basic', cost: 85000, price: 199000 },
+    { id: 'P002', name: 'Quần jean slim-fit', cost: 220000, price: 449000 },
+    { id: 'P003', name: 'Giày sneaker unisex', cost: 340000, price: 699000 },
+    { id: 'P004', name: 'Túi đeo chéo canvas', cost: 95000, price: 249000 },
+    { id: 'P005', name: 'Mũ lưỡi trai phối màu', cost: 42000, price: 129000 },
+  ];
+  state.products = sampleProducts;
+
+  const orders = [];
+  const ads = [];
+  const today = new Date();
+  const customers = ['Nguyễn An', 'Trần Bình', 'Lê Chi', 'Phạm Dung', 'Hoàng Em', 'Vũ Phúc', 'Đặng Giang', 'Bùi Hà', 'Ngô Khánh', 'Đỗ Lan'];
+  const statuses = [
+    { code: 'success', weight: 60, label: 'Giao thành công' },
+    { code: 'returned', weight: 10, label: 'Hoàn hàng' },
+    { code: 'failed', weight: 4, label: 'Giao không thành công' },
+    { code: 'cancelled', weight: 8, label: 'Hủy' },
+    { code: 'partial', weight: 5, label: 'Giao 1 phần' },
+    { code: 'shipping', weight: 10, label: 'Đang giao' },
+    { code: 'sent', weight: 3, label: 'Đã bắn sang VTP' },
+  ];
+
+  function pickStatus() {
+    const r = Math.random() * 100;
+    let acc = 0;
+    for (const s of statuses) {
+      acc += s.weight;
+      if (r <= acc) return s.code;
+    }
+    return 'success';
+  }
+
+  let orderIdCounter = 10001;
+  for (let d = 13; d >= 0; d--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - d);
+    const dateStr = date.toISOString().split('T')[0];
+
+    const numOrders = 12 + Math.floor(Math.random() * 18);
+    for (let i = 0; i < numOrders; i++) {
+      const numItems = 1 + Math.floor(Math.random() * 3);
+      const items = [];
+      let pancakeRevenue = 0;
+      for (let j = 0; j < numItems; j++) {
+        const p = sampleProducts[Math.floor(Math.random() * sampleProducts.length)];
+        const qty = 1 + Math.floor(Math.random() * 2);
+        items.push({ productId: p.id, name: p.name, qty, unitPrice: p.price, unitCost: p.cost });
+        pancakeRevenue += p.price * qty;
+      }
+      const status = pickStatus();
+      const shipFee = 22000 + Math.floor(Math.random() * 15000);
+      let actualRevenue = 0;
+      let actualShipFee = 0;
+      let returnFee = 0;
+      let sentToVtp = status !== 'cancelled';
+      let partialDetectionReasons = [];
+      let codFixedOnVtp = false;
+      // Mã VTP — chỉ tạo nếu đã bắn sang VTP
+      const vtpTracking = sentToVtp ? ('PKE' + (1300000000 + orderIdCounter * 137 + d * 1000 + i)) : null;
+
+      if (status === 'success') {
+        actualRevenue = pancakeRevenue;
+        actualShipFee = shipFee;
+      } else if (status === 'partial') {
+        // Đơn giao 1 phần: COD thu được = phí khách trả cho phần đã lấy
+        const partialAmount = [10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000][Math.floor(Math.random() * 8)];
+        actualRevenue = partialAmount;
+        actualShipFee = shipFee;
+        returnFee = 5000;
+        // 50% case A: VTP đã sửa COD, 50% case B: COD ẩn
+        codFixedOnVtp = Math.random() < 0.5;
+        partialDetectionReasons = ['has_return_shipment'];
+      } else if (status === 'returned' || status === 'failed') {
+        actualShipFee = shipFee;
+        returnFee = 15000;
+      } else if (status === 'cancelled') {
+        actualShipFee = 0;
+      } else if (status === 'shipping') {
+        actualShipFee = shipFee;
+      } else if (status === 'sent') {
+        actualShipFee = 0;
+      }
+
+      orders.push({
+        id: 'PO' + (orderIdCounter++),
+        date: dateStr,
+        customer: customers[Math.floor(Math.random() * customers.length)],
+        customerPhone: '09' + String(10000000 + Math.floor(Math.random() * 89999999)),
+        vtpTracking,
+        items,
+        pancakeRevenue,
+        status,
+        sentToVtp,
+        actualRevenue,
+        shipFee: actualShipFee,
+        returnFee,
+        partialDetectionReasons,
+        codFixedOnVtp,
+        vtpReturnStatus: (status === 'returned' || status === 'failed' || status === 'partial')
+          ? (Math.random() < 0.6 ? 'returning' : 'returned')
+          : null
+      });
+    }
+
+    const revenueBase = numOrders * 350000;
+    ads.push({
+      date: dateStr,
+      cost: Math.round(revenueBase * (0.15 + Math.random() * 0.1)),
+      ordersFromAds: Math.round(numOrders * 0.7)
+    });
+  }
+
+  state.orders = orders;
+  state.ads = ads;
+
+  // Generate payouts: group successful orders into batches every 2-3 days
+  const successOrders = orders.filter(o => o.status === 'success' || o.status === 'partial');
+  successOrders.sort((a,b) => a.date.localeCompare(b.date));
+  const payouts = [];
+  let batchIdx = 1;
+  let i = 0;
+  while (i < successOrders.length) {
+    const batchSize = 4 + Math.floor(Math.random() * 8);
+    const batch = successOrders.slice(i, i + batchSize);
+    if (batch.length === 0) break;
+    const batchDate = batch[batch.length - 1].date;
+    const payoutDate = new Date(batchDate);
+    payoutDate.setDate(payoutDate.getDate() + 2);
+    const payoutDateStr = payoutDate.toISOString().split('T')[0];
+    const todayStr = today.toISOString().split('T')[0];
+    const isReceived = payoutDateStr <= todayStr;
+
+    payouts.push({
+      id: 'VTP-' + (10000 + batchIdx),
+      batchDate: batchDate,
+      payoutDate: isReceived ? payoutDateStr : null,
+      status: isReceived ? 'received' : 'processing',
+      orderIds: batch.map(o => o.id),
+      totalCOD: batch.reduce((s, o) => s + o.actualRevenue, 0)
+    });
+    batchIdx++;
+    i += batchSize;
+  }
+  state.payouts = payouts;
+
+  saveState();
+  if (!silent) {
+    toast('Đã tạo dữ liệu mẫu 14 ngày với ' + orders.length + ' đơn hàng');
+    renderAll();
+  }
+}
+
+// ============================================================================
+// CALCULATIONS
+// ============================================================================
+function aggregateByDay() {
+  const days = {};
+  state.orders.forEach(o => {
+    if (!days[o.date]) {
+      days[o.date] = {
+        date: o.date, orders: 0, sentCount: 0, pancakeRevenue: 0, successCount: 0,
+        returnedCount: 0, failedCount: 0, cancelledCount: 0, partialCount: 0, shippingCount: 0,
+        returnLikeCount: 0,
+        actualRevenue: 0, cogs: 0, shipFee: 0, returnFee: 0
+      };
+    }
+    const d = days[o.date];
+    d.orders++;
+    if (o.sentToVtp) d.sentCount++;
+    d.pancakeRevenue += o.pancakeRevenue;
+    d.actualRevenue += o.actualRevenue;
+    d.shipFee += o.shipFee;
+    d.returnFee += o.returnFee || 0;
+    if (o.status === 'success') {
+      d.successCount++;
+      d.cogs += o.items.reduce((s,it) => s + it.unitCost * it.qty, 0);
+    } else if (o.status === 'partial') {
+      d.partialCount++;
+      d.returnLikeCount++;
+      // Giá vốn đơn 1 phần = SHOP NHẬP TAY (lưu trong partialCogs)
+      // Nếu chưa nhập → tạm tính 50% để vẫn có số tổng kê
+      const fullCogs = o.items.reduce((s,it) => s + it.unitCost * it.qty, 0);
+      const cogsForThisOrder = (state.partialCogs[o.id] !== undefined && state.partialCogs[o.id] !== null && state.partialCogs[o.id] !== '')
+        ? Number(state.partialCogs[o.id])
+        : Math.round(fullCogs * 0.5);
+      d.cogs += cogsForThisOrder;
+    } else if (o.status === 'returned') { d.returnedCount++; d.returnLikeCount++; }
+    else if (o.status === 'failed') { d.failedCount++; d.returnLikeCount++; }
+    else if (o.status === 'cancelled') d.cancelledCount++;
+    else if (o.status === 'shipping') d.shippingCount++;
+    // 'sent' status = đã bắn nhưng chưa có kết quả, không đếm vào các mục trên
+  });
+
+  const adsMap = {};
+  state.ads.forEach(a => { adsMap[a.date] = a; });
+
+  // Calculate daily fixed cost allocation
+  const dailyFixedCost = Math.round(state.fixedCosts.reduce((s, fc) => {
+    if (fc.cycle === 'monthly') return s + fc.amount / 30;
+    if (fc.cycle === 'yearly') return s + fc.amount / 365;
+    if (fc.cycle === 'daily') return s + fc.amount;
+    return s;
+  }, 0));
+
+  const rows = Object.values(days).sort((a,b) => a.date.localeCompare(b.date));
+  rows.forEach(r => {
+    const ad = adsMap[r.date] || { cost: 0, ordersFromAds: 0 };
+    r.adsCost = ad.cost;
+    r.ordersFromAds = ad.ordersFromAds;
+    r.fixedCost = dailyFixedCost;
+    r.totalCost = r.adsCost + r.cogs + r.shipFee + r.returnFee + r.fixedCost;
+    r.profit = r.actualRevenue - r.totalCost;
+    r.successRate = r.orders > 0 ? (r.successCount / r.orders) * 100 : 0;
+    r.returnRate = r.orders > 0 ? (r.returnedCount / r.orders) * 100 : 0;
+    r.roas = r.adsCost > 0 ? r.actualRevenue / r.adsCost : 0;
+    r.margin = r.actualRevenue > 0 ? (r.profit / r.actualRevenue) * 100 : 0;
+  });
+  return rows;
+}
+
+function filterByDate(rows) {
+  if (!state.dateFrom && !state.dateTo) return rows;
+  return rows.filter(r => {
+    if (state.dateFrom && r.date < state.dateFrom) return false;
+    if (state.dateTo && r.date > state.dateTo) return false;
+    return true;
+  });
+}
+
+// ============================================================================
+// RENDER
+// ============================================================================
+let charts = {};
+
+function renderDashboard() {
+  const rows = filterByDate(aggregateByDay());
+  const totals = rows.reduce((acc, r) => {
+    acc.orders += r.orders;
+    acc.sentCount += r.sentCount;
+    acc.pancakeRevenue += r.pancakeRevenue;
+    acc.successCount += r.successCount;
+    acc.returnLikeCount += r.returnLikeCount;
+    acc.shippingCount += r.shippingCount;
+    acc.cancelledCount += r.cancelledCount;
+    acc.actualRevenue += r.actualRevenue;
+    acc.adsCost += r.adsCost;
+    acc.cogs += r.cogs;
+    acc.shipFee += r.shipFee;
+    acc.returnFee += r.returnFee;
+    acc.fixedCost += r.fixedCost;
+    return acc;
+  }, { orders: 0, sentCount: 0, pancakeRevenue: 0, successCount: 0, returnLikeCount: 0, shippingCount: 0, cancelledCount: 0, actualRevenue: 0, adsCost: 0, cogs: 0, shipFee: 0, returnFee: 0, fixedCost: 0 });
+  const totalCost = totals.adsCost + totals.cogs + totals.shipFee + totals.returnFee + totals.fixedCost;
+  const profit = totals.actualRevenue - totalCost;
+  const grossProfit = totals.actualRevenue - totals.adsCost - totals.cogs - totals.shipFee - totals.returnFee;
+  const margin = totals.actualRevenue > 0 ? (profit / totals.actualRevenue) * 100 : 0;
+  const successRate = totals.orders > 0 ? (totals.successCount / totals.orders) * 100 : 0;
+  const sentRate = totals.orders > 0 ? (totals.sentCount / totals.orders) * 100 : 0;
+  const roas = totals.adsCost > 0 ? totals.actualRevenue / totals.adsCost : 0;
+
+  // Financial KPIs
+  document.getElementById('kpi-revenue-total').textContent = fmtShort(totals.pancakeRevenue);
+  document.getElementById('kpi-revenue-actual').textContent = fmtShort(totals.actualRevenue);
+  document.getElementById('kpi-ads').textContent = fmtShort(totals.adsCost);
+  document.getElementById('kpi-roas').textContent = roas.toFixed(2) + 'x';
+  document.getElementById('kpi-cost-total').textContent = fmtShort(totalCost);
+  document.getElementById('kpi-profit').textContent = fmtShort(profit);
+  const profitEl = document.getElementById('kpi-profit');
+  profitEl.className = 'kpi-value ' + (profit >= 0 ? 'pos' : 'neg');
+  document.getElementById('kpi-margin').textContent = fmtPct(margin);
+
+  // Fixed cost KPI (if element exists)
+  const elFixed = document.getElementById('kpi-fixed-cost');
+  if (elFixed) elFixed.textContent = fmtShort(totals.fixedCost);
+  const elGross = document.getElementById('kpi-gross-profit');
+  if (elGross) {
+    elGross.textContent = fmtShort(grossProfit);
+    elGross.className = 'kpi-value ' + (grossProfit >= 0 ? 'pos' : 'neg');
+  }
+
+  // Order count KPIs
+  document.getElementById('kpi-orders-total').textContent = totals.orders.toLocaleString('vi-VN');
+  document.getElementById('kpi-orders-sent').textContent = totals.sentCount.toLocaleString('vi-VN');
+  document.getElementById('kpi-sent-rate').textContent = fmtPct(sentRate);
+  document.getElementById('kpi-orders-shipping').textContent = totals.shippingCount.toLocaleString('vi-VN');
+  document.getElementById('kpi-orders-success').textContent = totals.successCount.toLocaleString('vi-VN');
+  document.getElementById('kpi-success-rate').textContent = fmtPct(successRate);
+  document.getElementById('kpi-orders-returned').textContent = totals.returnLikeCount.toLocaleString('vi-VN');
+  document.getElementById('kpi-orders-cancelled').textContent = totals.cancelledCount.toLocaleString('vi-VN');
+
+  // Revenue chart
+  const ctx1 = document.getElementById('chart-revenue');
+  if (charts.revenue) charts.revenue.destroy();
+  charts.revenue = new Chart(ctx1, {
+    type: 'line',
+    data: {
+      labels: rows.map(r => fmtDate(r.date)),
+      datasets: [
+        { label: 'DT Pancake', data: rows.map(r => r.pancakeRevenue), borderColor: '#6FA8DC', backgroundColor: 'rgba(111,168,220,0.1)', fill: true, tension: 0.3, borderWidth: 2 },
+        { label: 'DT thực tế', data: rows.map(r => r.actualRevenue), borderColor: '#7FB069', backgroundColor: 'rgba(127,176,105,0.1)', fill: true, tension: 0.3, borderWidth: 2 }
+      ]
+    },
+    options: chartOpts()
+  });
+
+  // Status doughnut
+  const ctx2 = document.getElementById('chart-status');
+  if (charts.status) charts.status.destroy();
+  const statusCounts = { success:0, returned:0, cancelled:0, partial:0, shipping:0, sent:0, failed:0 };
+  state.orders.forEach(o => {
+    if (state.dateFrom && o.date < state.dateFrom) return;
+    if (state.dateTo && o.date > state.dateTo) return;
+    statusCounts[o.status] = (statusCounts[o.status] || 0) + 1;
+  });
+  charts.status = new Chart(ctx2, {
+    type: 'doughnut',
+    data: {
+      labels: ['Thành công', 'Hoàn', 'Giao không TC', 'Hủy', 'Giao 1 phần', 'Đang giao', 'Đã bắn VTP'],
+      datasets: [{
+        data: [statusCounts.success, statusCounts.returned, statusCounts.failed, statusCounts.cancelled, statusCounts.partial, statusCounts.shipping, statusCounts.sent],
+        backgroundColor: ['#7FB069', '#D76464', '#A0504A', '#6D665C', '#E8B84A', '#6FA8DC', '#8E7CC3'],
+        borderColor: 'var(--surface)',
+        borderWidth: 2
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#A39B8E', font: { family: 'Geist', size: 12 }, padding: 10 } } }, cutout: '60%' }
+  });
+
+  // Profit chart
+  const ctx3 = document.getElementById('chart-profit');
+  if (charts.profit) charts.profit.destroy();
+  charts.profit = new Chart(ctx3, {
+    type: 'bar',
+    data: {
+      labels: rows.map(r => fmtDate(r.date)),
+      datasets: [
+        { label: 'Chi phí ads', data: rows.map(r => r.adsCost), backgroundColor: '#E8B84A', stack: 'cost' },
+        { label: 'Giá vốn', data: rows.map(r => r.cogs), backgroundColor: '#D76464', stack: 'cost' },
+        { label: 'Phí ship', data: rows.map(r => r.shipFee), backgroundColor: '#6FA8DC', stack: 'cost' },
+        { label: 'Phí hoàn', data: rows.map(r => r.returnFee), backgroundColor: '#A0504A', stack: 'cost' },
+        { label: 'CP cố định', data: rows.map(r => r.fixedCost), backgroundColor: '#8E7CC3', stack: 'cost' },
+        { label: 'Lợi nhuận', data: rows.map(r => r.profit), backgroundColor: '#7FB069', stack: 'profit', type: 'bar' }
+      ]
+    },
+    options: { ...chartOpts(), scales: { ...chartOpts().scales, x: { ...chartOpts().scales.x, stacked: true }, y: { ...chartOpts().scales.y, stacked: false } } }
+  });
+
+  if (rows.length > 0) {
+    document.getElementById('date-range-label').textContent = fmtDate(rows[0].date) + ' → ' + fmtDate(rows[rows.length-1].date);
+  }
+}
+
+function chartOpts() {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { color: '#A39B8E', font: { family: 'Geist', size: 12 }, padding: 12, usePointStyle: true } },
+      tooltip: { backgroundColor: '#181614', titleColor: '#F4EFE6', bodyColor: '#A39B8E', borderColor: '#2E2A25', borderWidth: 1, padding: 12, callbacks: { label: (ctx) => ctx.dataset.label + ': ' + fmtShort(ctx.parsed.y) } }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(46,42,37,0.5)', drawBorder: false }, ticks: { color: '#6D665C', font: { family: 'Geist Mono', size: 11 } } },
+      y: { grid: { color: 'rgba(46,42,37,0.5)', drawBorder: false }, ticks: { color: '#6D665C', font: { family: 'Geist Mono', size: 11 }, callback: (v) => fmtShort(v) } }
+    }
+  };
+}
+
+function renderDaily() {
+  const rows = filterByDate(aggregateByDay());
+  const tbody = document.getElementById('daily-tbody');
+
+  // Calculate totals
+  const t = rows.reduce((acc, r) => {
+    acc.orders += r.orders;
+    acc.sentCount += r.sentCount;
+    acc.shippingCount += r.shippingCount;
+    acc.successCount += r.successCount;
+    acc.returnedPlusFailed += (r.returnedCount + r.failedCount);
+    acc.partialCount += r.partialCount;
+    acc.cancelledCount += r.cancelledCount;
+    acc.pancakeRevenue += r.pancakeRevenue;
+    acc.actualRevenue += r.actualRevenue;
+    acc.adsCost += r.adsCost;
+    acc.cogs += r.cogs;
+    acc.shipFee += r.shipFee;
+    acc.returnFee += r.returnFee;
+    acc.fixedCost += r.fixedCost;
+    acc.profit += r.profit;
+    return acc;
+  }, { orders:0, sentCount:0, shippingCount:0, successCount:0, returnedPlusFailed:0, partialCount:0, cancelledCount:0, pancakeRevenue:0, actualRevenue:0, adsCost:0, cogs:0, shipFee:0, returnFee:0, fixedCost:0, profit:0 });
+  const totalSuccessRate = t.orders > 0 ? (t.successCount / t.orders) * 100 : 0;
+  const totalRoas = t.adsCost > 0 ? t.actualRevenue / t.adsCost : 0;
+
+  const dailyRows = rows.map(r => `
+    <tr>
+      <td><strong>${fmtDate(r.date)}</strong></td>
+      <td class="num" style="border-left: 1px solid var(--border);">${r.orders}</td>
+      <td class="num">${r.sentCount}</td>
+      <td class="num"><span class="badge info">${r.shippingCount}</span></td>
+      <td class="num"><span class="badge success">${r.successCount}</span></td>
+      <td class="num"><span class="badge danger">${r.returnedCount + r.failedCount}</span></td>
+      <td class="num"><span class="badge warn">${r.partialCount}</span></td>
+      <td class="num" style="border-right: 1px solid var(--border);"><span class="badge" style="background:var(--surface-2); color:var(--text-muted)">${r.cancelledCount}</span></td>
+      <td class="num">${fmt(r.pancakeRevenue)}</td>
+      <td class="num pos" style="border-right: 1px solid var(--border);">${fmt(r.actualRevenue)}</td>
+      <td class="num">${fmt(r.adsCost)}</td>
+      <td class="num">${fmt(r.cogs)}</td>
+      <td class="num">${fmt(r.shipFee)}</td>
+      <td class="num">${fmt(r.returnFee)}</td>
+      <td class="num" style="border-right: 1px solid var(--border);">${fmt(r.fixedCost)}</td>
+      <td class="num ${r.profit >= 0 ? 'pos' : 'neg'}"><strong>${fmt(r.profit)}</strong></td>
+      <td class="num">${fmtPct(r.successRate)}</td>
+      <td class="num">${r.roas.toFixed(2)}x</td>
+    </tr>
+  `).join('');
+
+  const totalRow = `
+    <tr class="total-row">
+      <td><strong>TỔNG ${rows.length} ngày</strong></td>
+      <td class="num" style="border-left: 1px solid var(--border);"><strong>${t.orders.toLocaleString('vi-VN')}</strong></td>
+      <td class="num"><strong>${t.sentCount.toLocaleString('vi-VN')}</strong></td>
+      <td class="num"><strong>${t.shippingCount.toLocaleString('vi-VN')}</strong></td>
+      <td class="num"><strong class="pos">${t.successCount.toLocaleString('vi-VN')}</strong></td>
+      <td class="num"><strong class="neg">${t.returnedPlusFailed.toLocaleString('vi-VN')}</strong></td>
+      <td class="num"><strong>${t.partialCount.toLocaleString('vi-VN')}</strong></td>
+      <td class="num" style="border-right: 1px solid var(--border);"><strong>${t.cancelledCount.toLocaleString('vi-VN')}</strong></td>
+      <td class="num"><strong>${fmt(t.pancakeRevenue)}</strong></td>
+      <td class="num pos" style="border-right: 1px solid var(--border);"><strong>${fmt(t.actualRevenue)}</strong></td>
+      <td class="num"><strong>${fmt(t.adsCost)}</strong></td>
+      <td class="num"><strong>${fmt(t.cogs)}</strong></td>
+      <td class="num"><strong>${fmt(t.shipFee)}</strong></td>
+      <td class="num"><strong>${fmt(t.returnFee)}</strong></td>
+      <td class="num" style="border-right: 1px solid var(--border);"><strong>${fmt(t.fixedCost)}</strong></td>
+      <td class="num ${t.profit >= 0 ? 'pos' : 'neg'}"><strong>${fmt(t.profit)}</strong></td>
+      <td class="num"><strong>${fmtPct(totalSuccessRate)}</strong></td>
+      <td class="num"><strong>${totalRoas.toFixed(2)}x</strong></td>
+    </tr>
+  `;
+
+  tbody.innerHTML = totalRow + dailyRows;
+}
+
+function renderOrders() {
+  let orders = state.orders.slice().sort((a,b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+  if (state.orderFilter !== 'all') {
+    if (state.orderFilter === 'mismatch') {
+      orders = orders.filter(o => o.status === 'success' && o.actualRevenue !== o.pancakeRevenue);
+    } else {
+      orders = orders.filter(o => o.status === state.orderFilter);
+    }
+  }
+
+  const statusLabels = {
+    success: ['Giao thành công', 'success'],
+    returned: ['Hoàn hàng', 'danger'],
+    failed: ['Giao không TC', 'danger'],
+    cancelled: ['Đã hủy', ''],
+    partial: ['Giao 1 phần', 'warn'],
+    shipping: ['Đang giao', 'info'],
+    sent: ['Đã bắn VTP', 'info']
+  };
+
+  const tbody = document.getElementById('orders-tbody');
+  tbody.innerHTML = orders.slice(0, 200).map(o => {
+    const cogs = o.items.reduce((s,it) => s + it.unitCost * it.qty, 0);
+    const partialCogsOverride = state.partialCogs[o.id];
+    const realCogs = o.status === 'success'
+      ? cogs
+      : (o.status === 'partial'
+          ? ((partialCogsOverride !== undefined && partialCogsOverride !== null && partialCogsOverride !== '')
+              ? Number(partialCogsOverride)
+              : Math.round(cogs * 0.5))
+          : 0);
+    const profit = o.actualRevenue - realCogs - o.shipFee - (o.returnFee || 0);
+    const [label, cls] = statusLabels[o.status];
+    const matched = o.status === 'success' && o.actualRevenue === o.pancakeRevenue;
+    const productsText = o.items.map(it => `${it.name} ×${it.qty}`).join(', ');
+    return `
+      <tr>
+        <td><strong>${o.id}</strong></td>
+        <td>${fmtDate(o.date)}</td>
+        <td>${o.customer}</td>
+        <td style="max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${productsText}">${productsText}</td>
+        <td class="num">${fmt(o.pancakeRevenue)}</td>
+        <td><span class="badge ${cls}">${label}</span></td>
+        <td class="num">${o.actualRevenue > 0 ? fmt(o.actualRevenue) : '—'}</td>
+        <td class="num">${realCogs > 0 ? fmt(realCogs) : '—'}</td>
+        <td class="num">${o.shipFee > 0 ? fmt(o.shipFee) : '—'}</td>
+        <td class="num ${profit >= 0 ? 'pos' : 'neg'}">${o.status === 'cancelled' ? '—' : fmt(profit)}</td>
+        <td><span class="recon-status ${o.status === 'success' ? (matched ? 'match' : 'diff') : ''}">${o.status === 'success' ? (matched ? 'Khớp' : 'Lệch') : '—'}</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderProducts() {
+  document.getElementById('product-count').textContent = state.products.length;
+  const tbody = document.getElementById('product-tbody');
+  // count sold in last 30 days per product
+  const soldMap = {};
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
+  const cutoffStr = cutoff.toISOString().split('T')[0];
+  state.orders.forEach(o => {
+    if (o.date < cutoffStr) return;
+    if (o.status !== 'success' && o.status !== 'partial') return;
+    o.items.forEach(it => {
+      soldMap[it.productId] = (soldMap[it.productId] || 0) + it.qty;
+    });
+  });
+
+  tbody.innerHTML = state.products.map((p, idx) => `
+    <tr>
+      <td><code style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--text-muted);">${p.id}</code></td>
+      <td>${p.name}</td>
+      <td class="num">${fmt(p.price)}</td>
+      <td class="num"><input type="number" value="${p.cost}" style="width:120px; text-align:right; padding:4px 8px;" onchange="updateProductCost(${idx}, this.value)"></td>
+      <td><span class="badge info">Pancake</span></td>
+      <td class="num">${soldMap[p.id] || 0}</td>
+    </tr>
+  `).join('');
+}
+
+function updateProductCost(idx, value) {
+  if (state.products[idx]) {
+    state.products[idx].cost = parseInt(value) || 0;
+    saveState();
+    renderAll();
+    toast('Đã cập nhật giá vốn');
+  }
+}
+
+function renderAds() {
+  const tbody = document.getElementById('ads-tbody');
+  tbody.innerHTML = state.ads.slice().sort((a,b) => b.date.localeCompare(a.date)).map((a, idx) => `
+    <tr>
+      <td>${fmtDate(a.date)}</td>
+      <td class="num"><input type="number" value="${a.cost}" style="width:140px; text-align:right; padding:4px 8px;" onchange="updateAds('${a.date}', 'cost', this.value)"></td>
+      <td class="num"><input type="number" value="${a.ordersFromAds}" style="width:80px; text-align:right; padding:4px 8px;" onchange="updateAds('${a.date}', 'ordersFromAds', this.value)"></td>
+      <td class="num">${a.ordersFromAds > 0 ? fmt(a.cost / a.ordersFromAds) : '—'}</td>
+      <td></td>
+    </tr>
+  `).join('');
+}
+
+function updateAds(date, field, value) {
+  const a = state.ads.find(x => x.date === date);
+  if (a) {
+    a[field] = parseInt(value) || 0;
+    saveState();
+    renderAll();
+  }
+}
+
+// ============================================================================
+// MONTHLY REPORT
+// ============================================================================
+function aggregateByMonth() {
+  const months = {};
+  state.orders.forEach(o => {
+    const month = o.date.slice(0, 7);
+    if (!months[month]) {
+      months[month] = {
+        month, orders: 0, successCount: 0, returnLikeCount: 0, cancelledCount: 0,
+        pancakeRevenue: 0, actualRevenue: 0, cogs: 0, shipFee: 0, returnFee: 0
+      };
+    }
+    const m = months[month];
+    m.orders++;
+    m.pancakeRevenue += o.pancakeRevenue;
+    m.actualRevenue += o.actualRevenue;
+    m.shipFee += o.shipFee;
+    m.returnFee += o.returnFee || 0;
+    if (o.status === 'success') {
+      m.successCount++;
+      m.cogs += o.items.reduce((s,it) => s + it.unitCost * it.qty, 0);
+    } else if (o.status === 'partial') {
+      m.returnLikeCount++;
+      const fullCogs = o.items.reduce((s,it) => s + it.unitCost * it.qty, 0);
+      const cogsForThisOrder = (state.partialCogs[o.id] !== undefined && state.partialCogs[o.id] !== null && state.partialCogs[o.id] !== '')
+        ? Number(state.partialCogs[o.id])
+        : Math.round(fullCogs * 0.5);
+      m.cogs += cogsForThisOrder;
+    } else if (o.status === 'returned' || o.status === 'failed') m.returnLikeCount++;
+    else if (o.status === 'cancelled') m.cancelledCount++;
+  });
+
+  const adsByMonth = {};
+  state.ads.forEach(a => {
+    const m = a.date.slice(0, 7);
+    adsByMonth[m] = (adsByMonth[m] || 0) + a.cost;
+  });
+
+  const monthlyFixedCost = state.fixedCosts.reduce((s, fc) => {
+    if (fc.cycle === 'monthly') return s + fc.amount;
+    if (fc.cycle === 'yearly') return s + fc.amount / 12;
+    if (fc.cycle === 'daily') return s + fc.amount * 30;
+    return s;
+  }, 0);
+
+  const rows = Object.values(months).sort((a,b) => a.month.localeCompare(b.month));
+  rows.forEach(r => {
+    r.adsCost = adsByMonth[r.month] || 0;
+    r.fixedCost = Math.round(monthlyFixedCost);
+    r.totalCost = r.adsCost + r.cogs + r.shipFee + r.returnFee + r.fixedCost;
+    r.profit = r.actualRevenue - r.totalCost;
+    r.successRate = r.orders > 0 ? (r.successCount / r.orders) * 100 : 0;
+    r.margin = r.actualRevenue > 0 ? (r.profit / r.actualRevenue) * 100 : 0;
+  });
+  return rows;
+}
+
+function renderMonthly() {
+  const rows = aggregateByMonth();
+  const tbody = document.getElementById('monthly-tbody');
+  if (!tbody) return;
+
+  const monthLabel = (m) => {
+    const [y, mo] = m.split('-');
+    return `Tháng ${parseInt(mo)}/${y}`;
+  };
+
+  const t = rows.reduce((acc, r) => {
+    acc.orders += r.orders;
+    acc.successCount += r.successCount;
+    acc.returnLikeCount += r.returnLikeCount;
+    acc.cancelledCount += r.cancelledCount;
+    acc.pancakeRevenue += r.pancakeRevenue;
+    acc.actualRevenue += r.actualRevenue;
+    acc.adsCost += r.adsCost;
+    acc.cogs += r.cogs;
+    acc.shipFee += r.shipFee;
+    acc.returnFee += r.returnFee;
+    acc.fixedCost += r.fixedCost;
+    acc.profit += r.profit;
+    return acc;
+  }, { orders:0, successCount:0, returnLikeCount:0, cancelledCount:0, pancakeRevenue:0, actualRevenue:0, adsCost:0, cogs:0, shipFee:0, returnFee:0, fixedCost:0, profit:0 });
+  const tSuccessRate = t.orders > 0 ? (t.successCount / t.orders) * 100 : 0;
+  const tMargin = t.actualRevenue > 0 ? (t.profit / t.actualRevenue) * 100 : 0;
+
+  const totalRow = `
+    <tr class="total-row">
+      <td><strong>TỔNG ${rows.length} tháng</strong></td>
+      <td class="num" style="border-left: 1px solid var(--border);"><strong>${t.orders.toLocaleString('vi-VN')}</strong></td>
+      <td class="num"><strong class="pos">${t.successCount.toLocaleString('vi-VN')}</strong></td>
+      <td class="num"><strong class="neg">${t.returnLikeCount.toLocaleString('vi-VN')}</strong></td>
+      <td class="num" style="border-right: 1px solid var(--border);"><strong>${t.cancelledCount.toLocaleString('vi-VN')}</strong></td>
+      <td class="num"><strong>${fmt(t.pancakeRevenue)}</strong></td>
+      <td class="num pos" style="border-right: 1px solid var(--border);"><strong>${fmt(t.actualRevenue)}</strong></td>
+      <td class="num"><strong>${fmt(t.adsCost)}</strong></td>
+      <td class="num"><strong>${fmt(t.cogs)}</strong></td>
+      <td class="num"><strong>${fmt(t.shipFee)}</strong></td>
+      <td class="num"><strong>${fmt(t.returnFee)}</strong></td>
+      <td class="num" style="border-right: 1px solid var(--border);"><strong>${fmt(t.fixedCost)}</strong></td>
+      <td class="num ${t.profit >= 0 ? 'pos' : 'neg'}"><strong>${fmt(t.profit)}</strong></td>
+      <td class="num"><strong>${fmtPct(tSuccessRate)}</strong></td>
+      <td class="num"><strong>${fmtPct(tMargin)}</strong></td>
+    </tr>
+  `;
+
+  const body = rows.map(r => `
+    <tr>
+      <td><strong>${monthLabel(r.month)}</strong></td>
+      <td class="num" style="border-left: 1px solid var(--border);">${r.orders}</td>
+      <td class="num"><span class="badge success">${r.successCount}</span></td>
+      <td class="num"><span class="badge danger">${r.returnLikeCount}</span></td>
+      <td class="num" style="border-right: 1px solid var(--border);"><span class="badge" style="background:var(--surface-2); color:var(--text-muted)">${r.cancelledCount}</span></td>
+      <td class="num">${fmt(r.pancakeRevenue)}</td>
+      <td class="num pos" style="border-right: 1px solid var(--border);">${fmt(r.actualRevenue)}</td>
+      <td class="num">${fmt(r.adsCost)}</td>
+      <td class="num">${fmt(r.cogs)}</td>
+      <td class="num">${fmt(r.shipFee)}</td>
+      <td class="num">${fmt(r.returnFee)}</td>
+      <td class="num" style="border-right: 1px solid var(--border);">${fmt(r.fixedCost)}</td>
+      <td class="num ${r.profit >= 0 ? 'pos' : 'neg'}"><strong>${fmt(r.profit)}</strong></td>
+      <td class="num">${fmtPct(r.successRate)}</td>
+      <td class="num">${fmtPct(r.margin)}</td>
+    </tr>
+  `).join('');
+
+  tbody.innerHTML = totalRow + body;
+}
+
+function exportMonthlyCSV() {
+  const rows = aggregateByMonth();
+  const header = ['Tháng','Đơn tạo','Thành công','Hoàn/KTC','Hủy','DT Pancake','DT thực tế','Ads','Giá vốn','Phí ship','Phí hoàn','CP cố định','Lợi nhuận','Tỉ lệ TC (%)','Biên LN (%)'];
+  const lines = [header.join(',')];
+  rows.forEach(r => {
+    lines.push([r.month, r.orders, r.successCount, r.returnLikeCount, r.cancelledCount, r.pancakeRevenue, r.actualRevenue, r.adsCost, r.cogs, r.shipFee, r.returnFee, r.fixedCost, r.profit, r.successRate.toFixed(1), r.margin.toFixed(1)].join(','));
+  });
+  downloadCSV('bao-cao-theo-thang.csv', lines.join('\n'));
+}
+
+function downloadCSV(filename, content) {
+  const blob = new Blob(['\ufeff' + content], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+  toast('Đã xuất ' + filename);
+}
+
+// ============================================================================
+// BY PRODUCT REPORT
+// ============================================================================
+function aggregateByProduct() {
+  const productStats = {};
+  state.products.forEach(p => {
+    productStats[p.id] = {
+      id: p.id, name: p.name, price: p.price, cost: p.cost,
+      totalQty: 0, successOrders: 0, returnedOrders: 0, totalOrders: 0,
+      actualRevenue: 0, cogsUsed: 0
+    };
+  });
+
+  // Track orders per product
+  state.orders.forEach(o => {
+    const productsInOrder = new Set();
+    o.items.forEach(it => {
+      if (!productStats[it.productId]) return;
+      const ps = productStats[it.productId];
+      productsInOrder.add(it.productId);
+      if (o.status === 'success') {
+        ps.totalQty += it.qty;
+        ps.actualRevenue += it.unitPrice * it.qty;
+        ps.cogsUsed += it.unitCost * it.qty;
+      } else if (o.status === 'partial') {
+        ps.totalQty += Math.round(it.qty * 0.5);
+        ps.actualRevenue += Math.round(it.unitPrice * it.qty * 0.5);
+        ps.cogsUsed += Math.round(it.unitCost * it.qty * 0.5);
+      }
+    });
+    productsInOrder.forEach(pid => {
+      const ps = productStats[pid];
+      ps.totalOrders++;
+      if (o.status === 'success') ps.successOrders++;
+      else if (o.status === 'returned' || o.status === 'failed' || o.status === 'partial') ps.returnedOrders++;
+    });
+  });
+
+  const rows = Object.values(productStats).map(p => ({
+    ...p,
+    returnRate: p.totalOrders > 0 ? (p.returnedOrders / p.totalOrders) * 100 : 0,
+    profit: p.actualRevenue - p.cogsUsed,
+    margin: p.actualRevenue > 0 ? ((p.actualRevenue - p.cogsUsed) / p.actualRevenue) * 100 : 0
+  }));
+
+  const sort = state.productSort;
+  rows.sort((a, b) => {
+    if (sort === 'profit') return b.profit - a.profit;
+    if (sort === 'revenue') return b.actualRevenue - a.actualRevenue;
+    if (sort === 'qty') return b.totalQty - a.totalQty;
+    if (sort === 'returnRate') return b.returnRate - a.returnRate;
+    if (sort === 'margin') return b.margin - a.margin;
+    return 0;
+  });
+  return rows;
+}
+
+function renderByProduct() {
+  const rows = aggregateByProduct();
+  const tbody = document.getElementById('byproduct-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = rows.map(p => `
+    <tr>
+      <td><code style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--text-muted);">${p.id}</code></td>
+      <td>${p.name}</td>
+      <td class="num">${fmt(p.price)}</td>
+      <td class="num">${fmt(p.cost)}</td>
+      <td class="num"><strong>${p.totalQty}</strong></td>
+      <td class="num"><span class="badge success">${p.successOrders}</span></td>
+      <td class="num"><span class="badge danger">${p.returnedOrders}</span></td>
+      <td class="num ${p.returnRate > 20 ? 'neg' : p.returnRate > 10 ? '' : 'pos'}"><strong>${fmtPct(p.returnRate)}</strong></td>
+      <td class="num">${fmt(p.actualRevenue)}</td>
+      <td class="num">${fmt(p.cogsUsed)}</td>
+      <td class="num ${p.profit >= 0 ? 'pos' : 'neg'}"><strong>${fmt(p.profit)}</strong></td>
+      <td class="num">${fmtPct(p.margin)}</td>
+    </tr>
+  `).join('');
+
+  // Top 5 by profit chart
+  const top = rows.slice().sort((a,b) => b.profit - a.profit).slice(0, 5);
+  const ctx1 = document.getElementById('chart-top-profit');
+  if (ctx1) {
+    if (charts.topProfit) charts.topProfit.destroy();
+    charts.topProfit = new Chart(ctx1, {
+      type: 'bar',
+      data: {
+        labels: top.map(p => p.name.length > 20 ? p.name.slice(0, 20) + '…' : p.name),
+        datasets: [{ label: 'Lãi gộp', data: top.map(p => p.profit), backgroundColor: '#7FB069' }]
+      },
+      options: { ...chartOpts(), indexAxis: 'y', plugins: { ...chartOpts().plugins, legend: { display: false } } }
+    });
+  }
+
+  // Return rate chart
+  const returnRateData = rows.slice().sort((a,b) => b.returnRate - a.returnRate);
+  const ctx2 = document.getElementById('chart-return-rate');
+  if (ctx2) {
+    if (charts.returnRate) charts.returnRate.destroy();
+    charts.returnRate = new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels: returnRateData.map(p => p.name.length > 20 ? p.name.slice(0, 20) + '…' : p.name),
+        datasets: [{
+          label: 'Tỉ lệ hoàn (%)',
+          data: returnRateData.map(p => p.returnRate),
+          backgroundColor: returnRateData.map(p => p.returnRate > 20 ? '#D76464' : p.returnRate > 10 ? '#E8B84A' : '#7FB069')
+        }]
+      },
+      options: { ...chartOpts(), indexAxis: 'y', plugins: { ...chartOpts().plugins, legend: { display: false }, tooltip: { ...chartOpts().plugins.tooltip, callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.x.toFixed(1) + '%' } } }, scales: { ...chartOpts().scales, x: { ...chartOpts().scales.x, ticks: { ...chartOpts().scales.x.ticks, callback: (v) => v + '%' } } } }
+    });
+  }
+}
+
+// ============================================================================
+// RETURNS REPORT
+// ============================================================================
+function getReturnOrders() {
+  return state.orders.filter(o =>
+    o.status === 'returned' || o.status === 'failed' || o.status === 'partial'
+  );
+}
+
+function renderReturns() {
+  const returnOrders = getReturnOrders();
+
+  // KPIs - counts only
+  const failedOrders = returnOrders.filter(o => o.status === 'returned' || o.status === 'failed');
+  const partialOrders = returnOrders.filter(o => o.status === 'partial');
+  const receivedOrders = returnOrders.filter(o => state.returnsReceived[o.id]);
+  const pendingOrders = returnOrders.filter(o => !state.returnsReceived[o.id]);
+
+  const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  setText('return-total', returnOrders.length.toLocaleString('vi-VN'));
+  setText('return-failed', failedOrders.length.toLocaleString('vi-VN'));
+  setText('return-partial', partialOrders.length.toLocaleString('vi-VN'));
+  setText('return-received', receivedOrders.length.toLocaleString('vi-VN'));
+  setText('return-pending', pendingOrders.length.toLocaleString('vi-VN'));
+
+  // Filtered table
+  let filtered = returnOrders.slice();
+  const f = state.returnFilter;
+  if (f === 'not-received') filtered = filtered.filter(o => !state.returnsReceived[o.id]);
+  else if (f === 'received') filtered = filtered.filter(o => state.returnsReceived[o.id]);
+  else if (f === 'failed') filtered = filtered.filter(o => o.status === 'returned' || o.status === 'failed');
+  else if (f === 'partial') filtered = filtered.filter(o => o.status === 'partial');
+  else if (f === 'returning') filtered = filtered.filter(o => o.vtpReturnStatus === 'returning');
+  else if (f === 'returned') filtered = filtered.filter(o => o.vtpReturnStatus === 'returned');
+
+  filtered.sort((a, b) => b.date.localeCompare(a.date));
+
+  // Update shown count
+  const shownEl = document.getElementById('returns-shown-count');
+  if (shownEl) shownEl.textContent = filtered.length.toLocaleString('vi-VN');
+
+  const tbody = document.getElementById('returns-tbody');
+  if (!tbody) return;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: var(--text-muted);">Không có đơn nào khớp bộ lọc</td></tr>';
+  } else {
+    tbody.innerHTML = filtered.slice(0, 300).map((o, idx) => {
+      const typeLabel = o.status === 'partial'
+        ? '<span class="badge warn">Giao 1 phần</span>'
+        : '<span class="badge danger">Đơn hoàn</span>';
+      const vtpStatus = o.vtpReturnStatus === 'returned'
+        ? '<span class="badge success">Đã hoàn</span>'
+        : o.vtpReturnStatus === 'returning'
+        ? '<span class="badge warn">Đang hoàn</span>'
+        : '<span class="badge" style="background:var(--surface-2); color:var(--text-muted)">—</span>';
+      const received = state.returnsReceived[o.id];
+      const warehouseStatus = received
+        ? `<span class="badge success">Đã về kho</span> <span style="font-size: 11px; color: var(--text-dim); margin-left: 4px;">${fmtDate(received.date)}</span> <button class="link" style="margin-left: 6px;" onclick="markReturnNotReceived('${o.id}')">Hủy</button>`
+        : '<span class="badge danger">Chưa về kho</span>';
+      const productsText = o.items.map(it => `${it.name} ×${it.qty}`).join(', ');
+      return `
+        <tr>
+          <td style="color: var(--text-muted); font-family: 'Geist Mono', monospace; font-size: 12px;">${idx + 1}</td>
+          <td><strong>${o.id}</strong></td>
+          <td>${fmtDate(o.date)}</td>
+          <td>${o.customer}</td>
+          <td style="max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${productsText}">${productsText}</td>
+          <td class="num">${fmt(o.pancakeRevenue)}</td>
+          <td>${typeLabel}</td>
+          <td>${vtpStatus}</td>
+          <td>${warehouseStatus}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // Render unknown codes card
+  renderUnknownCodes();
+}
+
+function renderUnknownCodes() {
+  const card = document.getElementById('unknown-codes-card');
+  const list = document.getElementById('unknown-codes-list');
+  if (!card || !list) return;
+  if (state.unknownCodes.length === 0) {
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = 'block';
+  list.innerHTML = state.unknownCodes.map(code => `
+    <code style="display: inline-block; padding: 4px 10px; background: var(--red-soft); color: var(--red); border-radius: 4px; font-family: 'Geist Mono', monospace; font-size: 12px;">${code}</code>
+  `).join('');
+}
+
+function applyBulkReceived() {
+  const input = document.getElementById('bulk-received-input');
+  const raw = input.value.trim();
+  if (!raw) {
+    toast('Vui lòng dán danh sách mã đơn trước');
+    return;
+  }
+  // Parse: split by newline, comma, semicolon, whitespace, tab
+  const codes = raw.split(/[\s,;]+/).map(c => c.trim()).filter(c => c.length > 0);
+  if (codes.length === 0) {
+    toast('Không tìm thấy mã đơn nào');
+    return;
+  }
+
+  const returnOrderIds = new Set(getReturnOrders().map(o => o.id));
+  const today = new Date().toISOString().split('T')[0];
+
+  let matched = 0;
+  let alreadyMarked = 0;
+  const unknown = [];
+  const seen = new Set();
+
+  codes.forEach(code => {
+    if (seen.has(code)) return;
+    seen.add(code);
+    if (returnOrderIds.has(code)) {
+      if (state.returnsReceived[code]) {
+        alreadyMarked++;
+      } else {
+        state.returnsReceived[code] = { date: today };
+        matched++;
+      }
+    } else {
+      unknown.push(code);
+    }
+  });
+
+  // Save unknown codes (merge with existing, dedupe)
+  if (unknown.length > 0) {
+    const existingUnknown = new Set(state.unknownCodes);
+    unknown.forEach(c => existingUnknown.add(c));
+    state.unknownCodes = Array.from(existingUnknown);
+  }
+
+  saveState();
+
+  // Show result
+  const resultEl = document.getElementById('bulk-result');
+  if (resultEl) {
+    let html = '<div style="padding: 12px 16px; background: var(--surface-2); border-radius: 6px; font-size: 13px;">';
+    html += `<strong>Kết quả:</strong> ${matched} mã được đánh dấu đã về kho`;
+    if (alreadyMarked > 0) html += ` · ${alreadyMarked} mã đã đánh dấu từ trước`;
+    if (unknown.length > 0) html += ` · <span style="color: var(--red);">${unknown.length} mã không tìm thấy trong danh sách đơn hoàn</span>`;
+    html += '</div>';
+    resultEl.innerHTML = html;
+    resultEl.style.display = 'block';
+  }
+
+  input.value = '';
+  renderReturns();
+  renderAll(); // refresh other pages too
+}
+
+function markReturnNotReceived(orderId) {
+  delete state.returnsReceived[orderId];
+  saveState();
+  renderReturns();
+}
+
+function clearUnknownCodes() {
+  state.unknownCodes = [];
+  saveState();
+  renderUnknownCodes();
+  toast('Đã xóa danh sách mã không khớp');
+}
+
+// ============================================================================
+// VTP RECONCILIATION (Đối soát đơn từ VTP với Pancake)
+// ============================================================================
+// Khi nối API VTP, hàm này nhận danh sách đơn từ VTP và đối soát với Pancake (state.orders).
+// Trả về:
+//   - partialOrderIds: Set chứa Pancake order IDs là đơn giao 1 phần (có 1P1 trong VTP)
+//   - orphanReturnShipments: Đơn 1P1 không tìm được đơn gốc
+//   - trulyUnknownVtpOrders: Đơn có ở VTP nhưng không có ở Pancake (không phải 1P1)
+//   - corrections: { [orderId]: { actualRevenue, codFixedOnVtp } } — sửa lại doanh thu thực tế
+function reconcileVTPWithPancake(vtpOrdersList) {
+  const result = {
+    partialOrderIds: new Set(),
+    orphanReturnShipments: [],
+    trulyUnknownVtpOrders: [],
+    corrections: {}
+  };
+
+  if (!vtpOrdersList || vtpOrdersList.length === 0) return result;
+
+  // Index Pancake orders by VTP tracking
+  const pancakeByVtpTracking = {};
+  state.orders.forEach(o => {
+    if (o.vtpTracking) pancakeByVtpTracking[o.vtpTracking] = o;
+  });
+
+  // Index VTP orders by tracking (loại trừ 1P1)
+  const vtpMainByTracking = {};
+  vtpOrdersList.forEach(v => {
+    if (!/1P1$/i.test(v.tracking)) vtpMainByTracking[v.tracking] = v;
+  });
+
+  // BƯỚC 1: Xử lý đơn 1P1 → đánh dấu đơn gốc
+  vtpOrdersList.forEach(v => {
+    if (!/1P1$/i.test(v.tracking)) return;
+
+    // Cách 1: Bỏ 1P1 → ra tracking gốc
+    const originalTracking = v.tracking.replace(/1P1$/i, '');
+    let originalVtp = vtpMainByTracking[originalTracking];
+
+    // Cách 2 (fallback): match SĐT người nhận
+    if (!originalVtp) {
+      originalVtp = vtpOrdersList.find(x =>
+        !/1P1$/i.test(x.tracking) &&
+        x.receiver_phone === v.receiver_phone
+      );
+    }
+
+    if (originalVtp) {
+      // Tìm đơn Pancake tương ứng với đơn gốc VTP này
+      const pancakeOrder = pancakeByVtpTracking[originalVtp.tracking];
+      if (pancakeOrder) {
+        result.partialOrderIds.add(pancakeOrder.id);
+        // Lấy COD thật từ VTP làm doanh thu thực tế
+        result.corrections[pancakeOrder.id] = {
+          actualRevenue: originalVtp.cod_collected,
+          codFixedOnVtp: originalVtp.cod_collected !== originalVtp.order_value,
+          source: 'vtp_1p1_match'
+        };
+      } else {
+        // Đơn gốc có ở VTP nhưng không ở Pancake → đơn lạ
+        result.trulyUnknownVtpOrders.push(originalVtp);
+      }
+    } else {
+      result.orphanReturnShipments.push(v);
+    }
+  });
+
+  // BƯỚC 2: Đơn lạ thật (không phải 1P1, không có ở Pancake)
+  vtpOrdersList.forEach(v => {
+    if (/1P1$/i.test(v.tracking)) return;
+    if (!pancakeByVtpTracking[v.tracking]) {
+      // Tránh thêm trùng nếu đã được thêm ở bước 1
+      if (!result.trulyUnknownVtpOrders.find(x => x.tracking === v.tracking)) {
+        result.trulyUnknownVtpOrders.push(v);
+      }
+    }
+  });
+
+  return result;
+}
+
+
+function getPartialOrders() {
+  return state.orders.filter(o => o.status === 'partial');
+}
+
+function renderPartial() {
+  const partialOrders = getPartialOrders();
+
+  // KPIs
+  const totalCount = partialOrders.length;
+  const originalValue = partialOrders.reduce((s, o) => s + o.pancakeRevenue, 0);
+  const collectedValue = partialOrders.reduce((s, o) => s + o.actualRevenue, 0);
+  const lossValue = originalValue - collectedValue;
+  const needCogsCount = partialOrders.filter(o => {
+    const c = state.partialCogs[o.id];
+    return c === undefined || c === null || c === '';
+  }).length;
+
+  const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  setText('partial-total', totalCount.toLocaleString('vi-VN'));
+  setText('partial-original-value', fmtShort(originalValue));
+  setText('partial-collected', fmtShort(collectedValue));
+  setText('partial-loss', fmtShort(lossValue));
+  setText('partial-need-cogs', needCogsCount.toLocaleString('vi-VN'));
+
+  // Filter
+  let filtered = partialOrders.slice();
+  const f = state.partialFilter;
+  if (f === 'need-cogs') {
+    filtered = filtered.filter(o => {
+      const c = state.partialCogs[o.id];
+      return c === undefined || c === null || c === '';
+    });
+  } else if (f === 'cod-fixed') {
+    filtered = filtered.filter(o => o.codFixedOnVtp === true);
+  } else if (f === 'cod-not-fixed') {
+    filtered = filtered.filter(o => o.codFixedOnVtp === false);
+  }
+
+  filtered.sort((a, b) => b.date.localeCompare(a.date));
+
+  const shownEl = document.getElementById('partial-shown-count');
+  if (shownEl) shownEl.textContent = filtered.length.toLocaleString('vi-VN');
+
+  const tbody = document.getElementById('partial-tbody');
+  if (!tbody) return;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: var(--text-muted);">Không có đơn nào khớp bộ lọc</td></tr>';
+    return;
+  }
+
+  // Reasons label map
+  const reasonLabels = {
+    'has_return_shipment': 'Có đơn hoàn (P1)',
+    'history_partial_event': 'Lịch sử ghi 1 phần',
+    'cod_lower_than_total': 'COD < giá trị đơn'
+  };
+
+  tbody.innerHTML = filtered.slice(0, 300).map((o, idx) => {
+    const productsText = o.items.map(it => `${it.name} ×${it.qty}`).join(', ');
+    const cogsValue = state.partialCogs[o.id];
+    const hasCogsValue = cogsValue !== undefined && cogsValue !== null && cogsValue !== '';
+    const profitOrLoss = hasCogsValue
+      ? (o.actualRevenue - Number(cogsValue) - (o.shipFee || 0) - (o.returnFee || 0))
+      : null;
+    const reasons = (o.partialDetectionReasons || []).map(r => reasonLabels[r] || r);
+    const codFixedBadge = o.codFixedOnVtp
+      ? '<span class="badge success" style="margin-left: 6px; font-size: 10px;">COD đã sửa</span>'
+      : '<span class="badge warn" style="margin-left: 6px; font-size: 10px;">COD ẩn</span>';
+
+    return `
+      <tr>
+        <td style="color: var(--text-muted); font-family: 'Geist Mono', monospace; font-size: 12px;">${idx + 1}</td>
+        <td><strong>${o.id}</strong>${codFixedBadge}</td>
+        <td>${fmtDate(o.date)}</td>
+        <td style="max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${productsText}">${productsText}</td>
+        <td class="num">${fmt(o.pancakeRevenue)}</td>
+        <td class="num pos">${fmt(o.actualRevenue)}</td>
+        <td class="num">
+          <input type="number" value="${hasCogsValue ? cogsValue : ''}" placeholder="Nhập..."
+            style="width: 110px; text-align: right; padding: 4px 8px; ${!hasCogsValue ? 'border-color: var(--accent);' : ''}"
+            onchange="updatePartialCogs('${o.id}', this.value)">
+        </td>
+        <td class="num">${profitOrLoss !== null
+          ? `<strong class="${profitOrLoss >= 0 ? 'pos' : 'neg'}">${fmt(profitOrLoss)}</strong>`
+          : '<span style="color: var(--text-dim);">—</span>'
+        }</td>
+        <td style="font-size: 11px; color: var(--text-muted);">${reasons.join(' · ') || '—'}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function updatePartialCogs(orderId, value) {
+  const num = value.trim();
+  if (num === '') {
+    delete state.partialCogs[orderId];
+  } else {
+    state.partialCogs[orderId] = parseInt(num) || 0;
+  }
+  saveState();
+  renderAll();
+  toast('Đã cập nhật giá vốn đơn ' + orderId);
+}
+
+
+function renderCOD() {
+  const payouts = state.payouts || [];
+
+  // KPIs
+  const received = payouts.filter(p => p.status === 'received');
+  const processing = payouts.filter(p => p.status === 'processing');
+  const receivedValue = received.reduce((s, p) => s + p.totalCOD, 0);
+  const processingValue = processing.reduce((s, p) => s + p.totalCOD, 0);
+  const totalValue = receivedValue + processingValue;
+
+  const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  setText('payout-received', fmtShort(receivedValue));
+  setText('payout-received-count', received.length);
+  setText('payout-processing', fmtShort(processingValue));
+  setText('payout-processing-count', processing.length);
+  setText('payout-total-count', payouts.length.toLocaleString('vi-VN'));
+  setText('payout-total-value', fmtShort(totalValue));
+
+  // Filter
+  let filtered = payouts.slice();
+  if (state.codFilter === 'received') filtered = filtered.filter(p => p.status === 'received');
+  else if (state.codFilter === 'processing') filtered = filtered.filter(p => p.status === 'processing');
+
+  filtered.sort((a, b) => b.batchDate.localeCompare(a.batchDate));
+
+  const shownEl = document.getElementById('payouts-shown-count');
+  if (shownEl) shownEl.textContent = filtered.length.toLocaleString('vi-VN');
+
+  const tbody = document.getElementById('payouts-tbody');
+  if (!tbody) return;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">Không có phiên nào khớp bộ lọc</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((p, idx) => {
+    const statusBadge = p.status === 'received'
+      ? '<span class="badge success">Đã chuyển</span>'
+      : '<span class="badge warn">Đang xử lý</span>';
+    return `
+      <tr>
+        <td style="color: var(--text-muted); font-family: 'Geist Mono', monospace; font-size: 12px;">${idx + 1}</td>
+        <td><strong>${p.id}</strong></td>
+        <td>${fmtDate(p.batchDate)}</td>
+        <td class="num"><strong>${p.orderIds.length}</strong></td>
+        <td class="num"><strong>${fmt(p.totalCOD)}</strong></td>
+        <td>${statusBadge}</td>
+        <td>${p.payoutDate ? fmtDate(p.payoutDate) : '<span style="color: var(--text-dim);">—</span>'}</td>
+        <td><button class="link" onclick="togglePayoutDetail('${p.id}', this)">Xem đơn</button></td>
+      </tr>
+      <tr id="payout-detail-${p.id}" style="display: none; background: var(--surface-2);">
+        <td></td>
+        <td colspan="7" style="padding: 12px 16px;">
+          <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">Danh sách ${p.orderIds.length} đơn trong phiên:</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            ${p.orderIds.map(oid => `<code style="padding: 3px 8px; background: var(--bg); border-radius: 4px; font-family: 'Geist Mono', monospace; font-size: 12px;">${oid}</code>`).join('')}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function togglePayoutDetail(payoutId, btn) {
+  const detailRow = document.getElementById('payout-detail-' + payoutId);
+  if (!detailRow) return;
+  const isOpen = detailRow.style.display !== 'none';
+  detailRow.style.display = isOpen ? 'none' : 'table-row';
+  btn.textContent = isOpen ? 'Xem đơn' : 'Thu gọn';
+}
+
+// ============================================================================
+// FIXED COSTS
+// ============================================================================
+function renderFixedCosts() {
+  const tbody = document.getElementById('fixed-costs-tbody');
+  if (!tbody) return;
+
+  const cycleLabels = { monthly: 'Hàng tháng', yearly: 'Hàng năm', daily: 'Hàng ngày', oneTime: 'Một lần' };
+
+  tbody.innerHTML = state.fixedCosts.map(fc => `
+    <tr>
+      <td><input type="text" value="${fc.name}" style="width: 200px; padding: 4px 8px;" onchange="updateFixedCost('${fc.id}', 'name', this.value)"></td>
+      <td class="num"><input type="number" value="${fc.amount}" style="width: 140px; text-align: right; padding: 4px 8px;" onchange="updateFixedCost('${fc.id}', 'amount', parseInt(this.value)||0)"></td>
+      <td>
+        <select style="padding: 4px 8px; font-size: 13px;" onchange="updateFixedCost('${fc.id}', 'cycle', this.value)">
+          <option value="monthly" ${fc.cycle==='monthly'?'selected':''}>Hàng tháng</option>
+          <option value="yearly" ${fc.cycle==='yearly'?'selected':''}>Hàng năm</option>
+          <option value="daily" ${fc.cycle==='daily'?'selected':''}>Hàng ngày</option>
+          <option value="oneTime" ${fc.cycle==='oneTime'?'selected':''}>Một lần</option>
+        </select>
+      </td>
+      <td><input type="text" value="${fc.note || ''}" placeholder="Ghi chú" style="width: 100%; padding: 4px 8px;" onchange="updateFixedCost('${fc.id}', 'note', this.value)"></td>
+      <td><button class="btn btn-ghost btn-danger" onclick="removeFixedCost('${fc.id}')">✕</button></td>
+    </tr>
+  `).join('');
+
+  // Calculate totals
+  let monthly = 0;
+  state.fixedCosts.forEach(fc => {
+    if (fc.cycle === 'monthly') monthly += fc.amount;
+    else if (fc.cycle === 'yearly') monthly += fc.amount / 12;
+    else if (fc.cycle === 'daily') monthly += fc.amount * 30;
+  });
+  const daily = monthly / 30;
+  const elMonthly = document.getElementById('fixed-monthly');
+  const elDaily = document.getElementById('fixed-daily');
+  if (elMonthly) elMonthly.textContent = fmt(Math.round(monthly));
+  if (elDaily) elDaily.textContent = fmt(Math.round(daily));
+}
+
+function addFixedCost() {
+  state.fixedCosts.push({
+    id: 'fc' + Date.now(),
+    name: 'Khoản chi mới',
+    amount: 0,
+    cycle: 'monthly',
+    note: ''
+  });
+  saveState();
+  renderFixedCosts();
+}
+
+function updateFixedCost(id, field, value) {
+  const fc = state.fixedCosts.find(f => f.id === id);
+  if (fc) {
+    fc[field] = value;
+    saveState();
+    renderFixedCosts();
+  }
+}
+
+function removeFixedCost(id) {
+  if (!confirm('Xóa khoản chi này?')) return;
+  state.fixedCosts = state.fixedCosts.filter(f => f.id !== id);
+  saveState();
+  renderFixedCosts();
+}
+
+function renderAll() {
+  renderDashboard();
+  renderDaily();
+  renderMonthly();
+  renderByProduct();
+  renderOrders();
+  renderCOD();
+  renderReturns();
+  renderPartial();
+  renderProducts();
+  renderAds();
+  renderFixedCosts();
+}
+
+// ============================================================================
+// ACTIONS
+// ============================================================================
+function refreshData() {
+  toast('Đang đồng bộ… (demo: giả lập 2 giây)');
+  setTimeout(() => {
+    // Simulate a few new orders today
+    const today = new Date().toISOString().split('T')[0];
+    const newCount = 3 + Math.floor(Math.random() * 5);
+    let id = 99000 + state.orders.length;
+    for (let i = 0; i < newCount; i++) {
+      const p = state.products[Math.floor(Math.random() * state.products.length)];
+      const qty = 1;
+      state.orders.push({
+        id: 'PO' + (++id),
+        date: today,
+        customer: 'KH đồng bộ ' + (i+1),
+        items: [{ productId: p.id, name: p.name, qty, unitPrice: p.price, unitCost: p.cost }],
+        pancakeRevenue: p.price * qty,
+        status: 'shipping',
+        actualRevenue: 0,
+        shipFee: 25000,
+        returnFee: 0
+      });
+    }
+    saveState();
+    renderAll();
+    toast('Đồng bộ xong — thêm ' + newCount + ' đơn mới');
+  }, 800);
+}
+
+function exportCSV() {
+  const rows = aggregateByDay();
+  const header = ['Ngày','Đơn tạo','DT Pancake','Thành công','Hoàn','Hủy','Giao 1 phần','DT thực tế','Chi phí ads','Giá vốn','Phí ship','Phí hoàn','CP cố định','Lợi nhuận','Tỉ lệ TC (%)','ROAS'];
+  const lines = [header.join(',')];
+  rows.forEach(r => {
+    lines.push([r.date, r.orders, r.pancakeRevenue, r.successCount, r.returnedCount, r.cancelledCount, r.partialCount, r.actualRevenue, r.adsCost, r.cogs, r.shipFee, r.returnFee, r.fixedCost, r.profit, r.successRate.toFixed(1), r.roas.toFixed(2)].join(','));
+  });
+  downloadCSV('bao-cao-doi-soat-' + new Date().toISOString().split('T')[0] + '.csv', lines.join('\n'));
+}
+
+async function resetAll() {
+  if (!confirm('Xóa toàn bộ dữ liệu? Không thể hoàn tác.')) return;
+  state.products = []; state.orders = []; state.ads = []; state.fixedCosts = []; state.codReceived = {}; state.returnsReceived = {}; state.unknownCodes = []; state.payouts = []; state.partialCogs = {};
+  try {
+    localStorage.removeItem('doi-soat-products');
+    localStorage.removeItem('doi-soat-orders');
+    localStorage.removeItem('doi-soat-ads');
+    localStorage.removeItem('doi-soat-fixed-costs');
+    localStorage.removeItem('doi-soat-cod');
+    localStorage.removeItem('doi-soat-payouts');
+    localStorage.removeItem('doi-soat-returns-received');
+    localStorage.removeItem('doi-soat-unknown-codes');
+    localStorage.removeItem('doi-soat-partial-cogs');
+  } catch(e) {}
+  generateSampleData();
+}
+
+// Backup & Restore
+function downloadBackup() {
+  const backup = {
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    data: {
+      products: state.products,
+      orders: state.orders,
+      ads: state.ads,
+      fixedCosts: state.fixedCosts,
+      codReceived: state.codReceived,
+      payouts: state.payouts,
+      returnsReceived: state.returnsReceived,
+      unknownCodes: state.unknownCodes,
+      partialCogs: state.partialCogs
+    }
+  };
+  const json = JSON.stringify(backup, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `doi-soat-backup-${dateStr}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  const orderCount = state.orders.length;
+  toast(`Đã tải file backup (${orderCount} đơn, ${state.products.length} sản phẩm)`);
+}
+
+function restoreBackup(file) {
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      const backup = JSON.parse(evt.target.result);
+      if (!backup.data) {
+        toast('File không đúng định dạng backup');
+        return;
+      }
+      const orderCount = (backup.data.orders || []).length;
+      const productCount = (backup.data.products || []).length;
+      if (!confirm(`Khôi phục ${orderCount} đơn hàng và ${productCount} sản phẩm? Dữ liệu hiện tại sẽ bị ghi đè.`)) {
+        return;
+      }
+      state.products = backup.data.products || [];
+      state.orders = backup.data.orders || [];
+      state.ads = backup.data.ads || [];
+      state.fixedCosts = backup.data.fixedCosts || [];
+      state.codReceived = backup.data.codReceived || {};
+      state.payouts = backup.data.payouts || [];
+      state.returnsReceived = backup.data.returnsReceived || {};
+      state.unknownCodes = backup.data.unknownCodes || [];
+      state.partialCogs = backup.data.partialCogs || {};
+      saveState();
+      renderAll();
+      toast(`Đã khôi phục ${orderCount} đơn hàng từ backup`);
+    } catch (e) {
+      toast('Lỗi đọc file: ' + e.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ============================================================================
+// NAVIGATION
+// ============================================================================
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    item.classList.add('active');
+    document.getElementById('page-' + item.dataset.page).classList.add('active');
+  });
+});
+
+// Pills: scope by nearest filter-bar container, read which data attribute
+document.querySelectorAll('.pill').forEach(p => {
+  p.addEventListener('click', () => {
+    const bar = p.closest('.filter-bar');
+    if (bar) bar.querySelectorAll('.pill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    if (p.dataset.filter !== undefined) {
+      state.orderFilter = p.dataset.filter;
+      renderOrders();
+    } else if (p.dataset.sort !== undefined) {
+      state.productSort = p.dataset.sort;
+      renderByProduct();
+    } else if (p.dataset.codFilter !== undefined) {
+      state.codFilter = p.dataset.codFilter;
+      renderCOD();
+    } else if (p.dataset.returnFilter !== undefined) {
+      state.returnFilter = p.dataset.returnFilter;
+      renderReturns();
+    } else if (p.dataset.partialFilter !== undefined) {
+      state.partialFilter = p.dataset.partialFilter;
+      renderPartial();
+    }
+  });
+});
+
+document.getElementById('date-from').addEventListener('change', (e) => {
+  state.dateFrom = e.target.value;
+  renderDashboard(); renderDaily();
+});
+document.getElementById('date-to').addEventListener('change', (e) => {
+  state.dateTo = e.target.value;
+  renderDashboard(); renderDaily();
+});
+
+// File handler cho Pancake (chưa parse, sẽ làm khi có file mẫu)
+const pancakeFileEl = document.getElementById('file-pancake');
+if (pancakeFileEl) {
+  pancakeFileEl.addEventListener('change', (e) => {
+    if (e.target.files.length) {
+      toast('Đã nhận file Pancake: ' + e.target.files[0].name + ' (chưa parse — cần file mẫu)');
+    }
+  });
+}
+
+// VTP Excel parser — XỬ LÝ THẬT
+const vtpFileEl = document.getElementById('file-vtp');
+if (vtpFileEl) {
+  vtpFileEl.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    parseVTPExcelFile(file);
+  });
+}
+
+// Drag & drop cho VTP
+const vtpDropZone = document.getElementById('vtp-drop-zone');
+if (vtpDropZone) {
+  vtpDropZone.addEventListener('dragover', (e) => { e.preventDefault(); vtpDropZone.classList.add('dragover'); });
+  vtpDropZone.addEventListener('dragleave', () => vtpDropZone.classList.remove('dragover'));
+  vtpDropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    vtpDropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) parseVTPExcelFile(e.dataTransfer.files[0]);
+  });
+}
+
+// ============================================================================
+// VTP EXCEL PARSER — Xử lý file Excel "Danh sách vận đơn" của VTP
+// ============================================================================
+function parseVTPExcelFile(file) {
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      const data = new Uint8Array(evt.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+
+      // VTP file: header ở dòng 9 (index 8), dùng range từ dòng 9
+      const rows = XLSX.utils.sheet_to_json(sheet, {
+        header: 1,  // mảng các mảng
+        defval: '',
+        blankrows: false
+      });
+
+      // Tìm dòng header (chứa "Mã Vận Đơn")
+      let headerRowIdx = -1;
+      for (let i = 0; i < Math.min(15, rows.length); i++) {
+        if (rows[i] && rows[i].some(cell => String(cell).trim() === 'Mã Vận Đơn')) {
+          headerRowIdx = i;
+          break;
+        }
+      }
+
+      if (headerRowIdx === -1) {
+        showVTPResult('error', 'Không tìm thấy dòng header trong file. File có đúng là "Danh sách vận đơn" từ VTP không?');
+        return;
+      }
+
+      const header = rows[headerRowIdx].map(h => String(h).trim());
+      const dataRows = rows.slice(headerRowIdx + 1).filter(r => r[0] && r[1]); // có STT và mã VĐ
+
+      if (dataRows.length === 0) {
+        showVTPResult('warn', 'File không có đơn nào.');
+        return;
+      }
+
+      // Map các cột cần thiết
+      const colIdx = {
+        tracking: header.indexOf('Mã Vận Đơn'),
+        order_ref: header.indexOf('Mã đơn hàng'),
+        created_date: header.indexOf('Ngày tạo'),
+        receiver_name: header.indexOf('Người nhận'),
+        receiver_phone: header.indexOf('ĐT Nhận'),
+        product: header.indexOf('Tên Hàng'),
+        order_value: header.indexOf('Giá trị'),
+        cod_collected: header.indexOf('Tiền thu hộ (4)'),
+        ship_fee: header.indexOf('Tổng phí (9)= (3)+(5)+(6)+(7)-(8)'),
+        status: header.indexOf('Trạng Thái'),
+        cod_payment_status: header.indexOf('Trạng thái đối soát COD'),
+        return_shipment: header.indexOf('Đơn chuyển hoàn')
+      };
+
+      // Validate các cột bắt buộc
+      const missing = [];
+      ['tracking', 'cod_collected', 'status'].forEach(k => {
+        if (colIdx[k] === -1) missing.push(k);
+      });
+      if (missing.length > 0) {
+        showVTPResult('error', 'File thiếu cột: ' + missing.join(', '));
+        return;
+      }
+
+      // Parse từng dòng thành object
+      const vtpOrders = dataRows.map(row => {
+        const get = (key) => colIdx[key] !== -1 ? String(row[colIdx[key]] || '').trim() : '';
+        const getNum = (key) => {
+          const val = get(key);
+          if (!val) return 0;
+          // Xử lý số có dấu phẩy ngăn cách hàng nghìn (ví dụ "800,000")
+          return parseInt(String(val).replace(/[^\d-]/g, '')) || 0;
+        };
+
+        return {
+          tracking: get('tracking'),
+          order_ref: get('order_ref'),
+          created_date: get('created_date'),
+          receiver_name: get('receiver_name'),
+          receiver_phone: get('receiver_phone'),
+          product: get('product'),
+          order_value: getNum('order_value'),
+          cod_collected: getNum('cod_collected'),
+          ship_fee: getNum('ship_fee'),
+          status: get('status'),
+          cod_payment_status: get('cod_payment_status'),
+          return_shipment: get('return_shipment')
+        };
+      });
+
+      // Áp dụng vào state.orders
+      const result = applyVTPDataToOrders(vtpOrders);
+      showVTPResult('success', result);
+
+      saveState();
+      renderAll();
+
+    } catch (err) {
+      showVTPResult('error', 'Lỗi đọc file: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ============================================================================
+// ÁP DỤNG DATA VTP VÀO STATE — Logic upsert + phát hiện 1P1
+// ============================================================================
+function applyVTPDataToOrders(vtpOrders) {
+  const stats = {
+    total: vtpOrders.length,
+    inserted: 0,
+    updated: 0,
+    unchanged: 0,
+    partialDetected: 0,
+    orphanReturns: 0,
+    unknownOrders: 0,
+    partialList: [],
+    unknownList: [],
+    orphanList: []
+  };
+
+  // Map status text VTP → app status
+  const mapStatus = (vtpStatus) => {
+    const s = vtpStatus.toLowerCase();
+    if (s.includes('giao thành công') || s.includes('phát thành công')) return 'success';
+    if (s.includes('chuyển hoàn') || s.includes('hoàn về kho')) return 'returned';
+    if (s.includes('phát thất bại') || s.includes('không phát')) return 'failed';
+    if (s.includes('hủy') || s.includes('huỷ')) return 'cancelled';
+    if (s.includes('đang giao') || s.includes('phát hàng')) return 'shipping';
+    if (s.includes('lấy hàng') || s.includes('khai thác') || s.includes('điều phối')) return 'sent';
+    return 'shipping'; // default
+  };
+
+  // Index hiện tại theo vtpTracking
+  const ordersByTracking = {};
+  state.orders.forEach((o, idx) => {
+    if (o.vtpTracking) ordersByTracking[o.vtpTracking] = idx;
+  });
+
+  // Tách đơn 1P1 và đơn chính
+  const mainVtpOrders = vtpOrders.filter(v => !/1P1$/i.test(v.tracking));
+  const returnVtpOrders = vtpOrders.filter(v => /1P1$/i.test(v.tracking));
+
+  // ===== BƯỚC 1: Upsert đơn chính =====
+  mainVtpOrders.forEach(v => {
+    const existingIdx = ordersByTracking[v.tracking];
+    const appStatus = mapStatus(v.status);
+
+    if (existingIdx !== undefined) {
+      // Đã có → cập nhật
+      const o = state.orders[existingIdx];
+      const before = JSON.stringify({
+        status: o.status,
+        actualRevenue: o.actualRevenue,
+        shipFee: o.shipFee
+      });
+
+      o.status = appStatus;
+      o.actualRevenue = v.cod_collected;
+      o.shipFee = v.ship_fee;
+      o.codFixedOnVtp = v.cod_collected !== v.order_value;
+
+      const after = JSON.stringify({
+        status: o.status,
+        actualRevenue: o.actualRevenue,
+        shipFee: o.shipFee
+      });
+
+      if (before !== after) stats.updated++;
+      else stats.unchanged++;
+    } else {
+      // Chưa có → đơn lạ (có ở VTP nhưng không có ở Pancake)
+      // Vẫn thêm vào để theo dõi
+      const newOrder = {
+        id: 'VTP_' + v.tracking,  // tạm dùng prefix VTP_ để phân biệt
+        date: parseVTPDate(v.created_date) || new Date().toISOString().split('T')[0],
+        customer: v.receiver_name,
+        customerPhone: v.receiver_phone,
+        vtpTracking: v.tracking,
+        items: [{ productId: 'unknown', name: v.product || 'Không rõ', qty: 1, unitPrice: v.order_value, unitCost: 0 }],
+        pancakeRevenue: v.order_value,
+        status: appStatus,
+        sentToVtp: true,
+        actualRevenue: v.cod_collected,
+        shipFee: v.ship_fee,
+        returnFee: 0,
+        codFixedOnVtp: v.cod_collected !== v.order_value,
+        partialDetectionReasons: [],
+        vtpReturnStatus: null,
+        isUnknownVtp: true  // đánh dấu đơn lạ
+      };
+      state.orders.push(newOrder);
+      ordersByTracking[v.tracking] = state.orders.length - 1;
+      stats.inserted++;
+      stats.unknownOrders++;
+      stats.unknownList.push(v.tracking);
+    }
+  });
+
+  // ===== BƯỚC 2: Xử lý đơn 1P1 =====
+  returnVtpOrders.forEach(rs => {
+    // Tìm đơn gốc: bỏ "1P1" cuối
+    const originalTracking = rs.tracking.replace(/1P1$/i, '');
+    let originalIdx = ordersByTracking[originalTracking];
+
+    // Fallback: tìm theo SĐT người nhận
+    if (originalIdx === undefined && rs.receiver_phone) {
+      const found = state.orders.findIndex(o =>
+        o.customerPhone === rs.receiver_phone &&
+        o.vtpTracking &&
+        !/1P1$/i.test(o.vtpTracking)
+      );
+      if (found !== -1) originalIdx = found;
+    }
+
+    if (originalIdx !== undefined) {
+      const original = state.orders[originalIdx];
+      // Đánh dấu đơn gốc là partial
+      original.status = 'partial';
+      original.partialDetectionReasons = ['has_return_shipment_1p1'];
+      original.codFixedOnVtp = original.actualRevenue !== original.pancakeRevenue;
+      original.vtpReturnStatus = 'returning'; // có thể update khi 1P1 đã về kho
+      stats.partialDetected++;
+      stats.partialList.push({
+        original: original.vtpTracking,
+        return: rs.tracking,
+        revenue: original.actualRevenue
+      });
+    } else {
+      stats.orphanReturns++;
+      stats.orphanList.push(rs.tracking);
+    }
+  });
+
+  return stats;
+}
+
+// Parse ngày tạo VTP (format: "17/04/2026 18:17:33" hoặc "17/04/2026")
+function parseVTPDate(dateStr) {
+  if (!dateStr) return null;
+  const match = String(dateStr).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (!match) return null;
+  return `${match[3]}-${match[2].padStart(2,'0')}-${match[1].padStart(2,'0')}`;
+}
+
+// ============================================================================
+// HIỂN THỊ KẾT QUẢ UPLOAD
+// ============================================================================
+function showVTPResult(type, content) {
+  const el = document.getElementById('vtp-upload-result');
+  if (!el) return;
+
+  if (type === 'error') {
+    el.innerHTML = `
+      <div style="padding: 14px 16px; background: var(--red-soft); border-left: 3px solid var(--red); border-radius: 6px; color: var(--text);">
+        <strong style="color: var(--red);">❌ Lỗi:</strong> ${content}
+      </div>
+    `;
+  } else if (type === 'warn') {
+    el.innerHTML = `
+      <div style="padding: 14px 16px; background: var(--accent-soft); border-left: 3px solid var(--accent); border-radius: 6px;">
+        <strong style="color: var(--accent);">⚠️</strong> ${content}
+      </div>
+    `;
+  } else if (type === 'success' && typeof content === 'object') {
+    const s = content;
+    let html = `
+      <div style="padding: 16px; background: var(--green-soft); border-left: 3px solid var(--green); border-radius: 6px;">
+        <div style="font-weight: 500; color: var(--green); margin-bottom: 10px;">✅ Đã xử lý ${s.total} đơn từ VTP</div>
+        <div style="font-size: 13px; line-height: 1.8; color: var(--text);">
+          • <strong>${s.inserted}</strong> đơn mới được thêm<br>
+          • <strong>${s.updated}</strong> đơn được cập nhật<br>
+          • <strong>${s.unchanged}</strong> đơn không có thay đổi<br>
+          • <strong style="color: var(--accent);">${s.partialDetected}</strong> đơn 1P1 phát hiện → đơn gốc đánh dấu "giao 1 phần"<br>
+          ${s.unknownOrders > 0 ? `• <strong style="color: var(--red);">${s.unknownOrders}</strong> đơn lạ (có ở VTP nhưng không có ở Pancake)<br>` : ''}
+          ${s.orphanReturns > 0 ? `• <strong style="color: var(--red);">${s.orphanReturns}</strong> đơn 1P1 mồ côi (không tìm thấy đơn gốc)<br>` : ''}
+        </div>
+    `;
+
+    if (s.partialList.length > 0 && s.partialList.length <= 10) {
+      html += `<div style="margin-top: 10px; font-size: 12px; color: var(--text-muted);"><strong>Đơn 1 phần phát hiện:</strong><br>`;
+      s.partialList.forEach(p => {
+        html += `&nbsp;&nbsp;${p.original} (thu ${(p.revenue || 0).toLocaleString('vi-VN')}đ)<br>`;
+      });
+      html += `</div>`;
+    }
+
+    if (s.unknownList.length > 0 && s.unknownList.length <= 10) {
+      html += `<div style="margin-top: 10px; font-size: 12px; color: var(--text-muted);"><strong>Đơn lạ:</strong><br>`;
+      s.unknownList.forEach(t => {
+        html += `&nbsp;&nbsp;${t}<br>`;
+      });
+      html += `</div>`;
+    }
+
+    if (s.orphanList.length > 0 && s.orphanList.length <= 10) {
+      html += `<div style="margin-top: 10px; font-size: 12px; color: var(--text-muted);"><strong>1P1 mồ côi:</strong><br>`;
+      s.orphanList.forEach(t => {
+        html += `&nbsp;&nbsp;${t}<br>`;
+      });
+      html += `</div>`;
+    }
+
+    html += `</div>`;
+    el.innerHTML = html;
+  }
+
+  el.style.display = 'block';
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// Facebook Ads CSV parser
+const fbFileEl = document.getElementById('file-fb-ads');
+if (fbFileEl) {
+  fbFileEl.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    parseFacebookAdsFile(file);
+  });
+}
+
+// Backup restore file handler
+const restoreFileEl = document.getElementById('restore-file');
+if (restoreFileEl) {
+  restoreFileEl.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    restoreBackup(file);
+    e.target.value = ''; // reset so same file can be selected again
+  });
+}
+
+// Drag & drop for FB zone
+const fbDropZone = document.getElementById('fb-drop-zone');
+if (fbDropZone) {
+  fbDropZone.addEventListener('dragover', (e) => { e.preventDefault(); fbDropZone.classList.add('dragover'); });
+  fbDropZone.addEventListener('dragleave', () => fbDropZone.classList.remove('dragover'));
+  fbDropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    fbDropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) parseFacebookAdsFile(e.dataTransfer.files[0]);
+  });
+}
+
+function parseFacebookAdsFile(file) {
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    const text = evt.target.result;
+    Papa.parse(text, {
+      header: true,
+      skipEmptyLines: true,
+      complete: function(results) {
+        const imported = processFacebookRows(results.data);
+        if (imported > 0) {
+          saveState();
+          renderAll();
+          toast('Đã nhập ' + imported + ' ngày chi phí từ Facebook');
+        } else {
+          toast('Không tìm thấy cột Day/Ngày và Amount spent/Chi phí. Kiểm tra file.');
+        }
+      }
+    });
+  };
+  reader.readAsText(file);
+}
+
+function processFacebookRows(rows) {
+  if (!rows.length) return 0;
+  const sample = rows[0];
+  const keys = Object.keys(sample);
+
+  // Try to find date column (English or Vietnamese)
+  const dateKey = keys.find(k => /^(day|date|ngày|ngay|reporting\s*starts)/i.test(k.trim()));
+  // Find spend column
+  const spendKey = keys.find(k => /(amount\s*spent|spend|chi\s*phí|chi\s*tiêu|chi\s*tieu)/i.test(k.trim()));
+  // Find results/purchases column (optional)
+  const resultsKey = keys.find(k => /(results|purchases|đơn|don|conversions)/i.test(k.trim()));
+
+  if (!dateKey || !spendKey) return 0;
+
+  let count = 0;
+  rows.forEach(row => {
+    const rawDate = (row[dateKey] || '').trim();
+    const rawSpend = (row[spendKey] || '').toString().replace(/[,.\sđ₫$VND]/g, '').replace(/[^\d]/g,'');
+    if (!rawDate || !rawSpend) return;
+
+    // Parse date - accept YYYY-MM-DD, DD/MM/YYYY, MM/DD/YYYY
+    let date = null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+      date = rawDate;
+    } else if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/.test(rawDate)) {
+      const parts = rawDate.split(/[\/\-]/);
+      // Assume DD/MM/YYYY (Vietnamese convention)
+      const d = parts[0].padStart(2,'0');
+      const m = parts[1].padStart(2,'0');
+      date = `${parts[2]}-${m}-${d}`;
+    } else {
+      const parsed = new Date(rawDate);
+      if (!isNaN(parsed)) date = parsed.toISOString().split('T')[0];
+    }
+    if (!date) return;
+
+    const cost = parseInt(rawSpend) || 0;
+    const ordersFromAds = resultsKey ? (parseInt((row[resultsKey]||'0').toString().replace(/[^\d]/g,'')) || 0) : 0;
+
+    // Upsert
+    const existing = state.ads.find(a => a.date === date);
+    if (existing) {
+      existing.cost = cost;
+      if (ordersFromAds > 0) existing.ordersFromAds = ordersFromAds;
+    } else {
+      state.ads.push({ date, cost, ordersFromAds });
+    }
+    count++;
+  });
+  return count;
+}
+
+// ============================================================================
+// INIT
+// ============================================================================
+(async function init() {
+  await loadState();
+  renderAll();
+})();
+</script>
+
+</body>
+</html>
