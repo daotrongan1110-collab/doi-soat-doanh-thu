@@ -178,11 +178,12 @@
     margin-bottom: 10px;
   }
   .kpi-value {
-    font-family: 'Fraunces', serif;
+    font-family: 'Geist', sans-serif;
     font-size: 26px;
-    font-weight: 500;
-    letter-spacing: -0.01em;
+    font-weight: 600;
+    letter-spacing: -0.02em;
     line-height: 1.1;
+    font-variant-numeric: tabular-nums;
   }
   .kpi-sub { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
   .kpi-trend { font-size: 12px; margin-top: 8px; display: flex; align-items: center; gap: 4px; }
@@ -657,7 +658,6 @@
       <div class="page-header">
         <div>
           <div class="page-title">Tổng quan đối soát</div>
-          <div class="page-subtitle">Doanh thu, chi phí và lợi nhuận từ <span id="date-range-label">7 ngày gần nhất</span></div>
         </div>
         <div class="page-actions">
           <div class="date-range">
@@ -1658,8 +1658,12 @@ async function loadState() {
     if (pc) state.partialCogs = JSON.parse(pc);
   } catch(e) {}
 
-  if (state.products.length === 0 && state.orders.length === 0) {
+  // Chỉ tự tạo mẫu nếu app hoàn toàn mới (chưa từng dùng)
+  // Sau khi user xóa data, không tự tạo lại
+  const hasInitFlag = localStorage.getItem('doi-soat-initialized');
+  if (state.products.length === 0 && state.orders.length === 0 && !hasInitFlag) {
     generateSampleData(true);
+    try { localStorage.setItem('doi-soat-initialized', '1'); } catch(e) {}
   }
   if (state.fixedCosts.length === 0) {
     state.fixedCosts = [
@@ -3108,7 +3112,7 @@ function exportCSV() {
 }
 
 async function resetAll() {
-  if (!confirm('Xóa toàn bộ dữ liệu? Không thể hoàn tác.')) return;
+  if (!confirm('Xóa toàn bộ dữ liệu? Không thể hoàn tác.\n\n(App sẽ trống hoàn toàn, không tạo lại dữ liệu mẫu)')) return;
   state.products = []; state.orders = []; state.ads = []; state.fixedCosts = []; state.codReceived = {}; state.returnsReceived = {}; state.unknownCodes = []; state.payouts = []; state.partialCogs = {};
   try {
     localStorage.removeItem('doi-soat-products');
@@ -3121,6 +3125,15 @@ async function resetAll() {
     localStorage.removeItem('doi-soat-unknown-codes');
     localStorage.removeItem('doi-soat-partial-cogs');
   } catch(e) {}
+  renderAll();
+  toast('Đã xóa toàn bộ dữ liệu. App đang trống — bấm "Tạo dữ liệu mẫu" nếu muốn xem demo, hoặc upload file VTP/Pancake.');
+}
+
+// Tạo dữ liệu mẫu (function riêng, gọi khi user muốn)
+function loadSampleData() {
+  if (state.orders.length > 0) {
+    if (!confirm('App đang có dữ liệu thật. Bạn muốn xóa và tạo lại dữ liệu mẫu?')) return;
+  }
   generateSampleData();
 }
 
