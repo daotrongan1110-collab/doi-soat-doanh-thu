@@ -304,6 +304,175 @@
   .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   @media (max-width: 1000px) { .chart-grid { grid-template-columns: 1fr; } }
 
+  /* ============================================================ */
+  /* MOBILE RESPONSIVE — viewport <= 768px (điện thoại) */
+  /* ============================================================ */
+  .mobile-menu-btn {
+    display: none;
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 100;
+    width: 40px;
+    height: 40px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+  .mobile-menu-btn svg { width: 20px; height: 20px; }
+  .mobile-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 90;
+  }
+  .mobile-overlay.active { display: block; }
+
+  @media (max-width: 768px) {
+    body { font-size: 13px; }
+
+    /* Layout: sidebar trượt từ trái */
+    .app { grid-template-columns: 1fr; }
+    .sidebar {
+      position: fixed;
+      left: -260px;
+      top: 0;
+      width: 240px;
+      z-index: 95;
+      transition: left 0.25s ease;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.3);
+    }
+    .sidebar.mobile-open { left: 0; }
+
+    .mobile-menu-btn { display: flex; }
+
+    /* Main content nhường chỗ cho nút hamburger */
+    .main {
+      padding: 64px 12px 20px 12px;
+      max-width: 100vw;
+      overflow-x: hidden;
+    }
+
+    /* Page header gọn hơn */
+    .page-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .page-title { font-size: 20px; }
+    .page-subtitle { font-size: 12px; }
+
+    /* KPI: 2 cột nhỏ */
+    .kpi-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .kpi-card {
+      padding: 10px 12px;
+      border-radius: 8px;
+    }
+    .kpi-label {
+      font-size: 11px !important;
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+    .kpi-value {
+      font-size: 18px !important;
+      line-height: 1.1;
+      margin-bottom: 2px;
+    }
+    .kpi-sub {
+      font-size: 10px !important;
+      line-height: 1.3;
+    }
+
+    /* Card padding gọn */
+    .card { padding: 14px; border-radius: 8px; }
+    .card-header { margin-bottom: 10px; }
+    .card-title { font-size: 14px; }
+    .card-subtitle { font-size: 11px; }
+
+    /* Filter bar — cuộn ngang */
+    .filter-bar {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      gap: 6px;
+      margin-bottom: 12px;
+      padding-bottom: 4px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .pill {
+      flex-shrink: 0;
+      padding: 6px 12px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    /* Table cuộn ngang, font nhỏ hơn */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { font-size: 12px; min-width: 600px; }
+    table th, table td { padding: 8px 10px; }
+
+    /* Form input gọn */
+    input[type="text"], input[type="number"], input[type="date"],
+    input[type="email"], input[type="password"], select, textarea {
+      font-size: 14px !important;
+      padding: 8px 10px !important;
+    }
+    .btn { padding: 8px 14px; font-size: 13px; }
+
+    /* Chart container */
+    .chart-grid { grid-template-columns: 1fr; gap: 12px; }
+    .chart-card { padding: 12px; }
+
+    /* Date range / filter gọn 1 dòng nhiều ô */
+    .date-range-bar, .filter-row {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .date-range-bar > *, .filter-row > * {
+      flex: 1 1 calc(50% - 4px);
+      min-width: 0;
+    }
+
+    /* Banner gọn */
+    .banner {
+      flex-direction: column;
+      gap: 6px;
+      padding: 10px 12px;
+      font-size: 12px;
+    }
+
+    /* Drop zone (upload file) gọn */
+    .drop-zone { padding: 24px 16px; }
+    .drop-zone-icon { font-size: 28px; }
+    .drop-zone-title { font-size: 13px; }
+    .drop-zone-hint { font-size: 11px; }
+
+    /* Forms: 2 ô 1 dòng thay vì 1 ô 1 dòng */
+    .form-grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    /* Toast nổi cao hơn để không bị che */
+    .toast { bottom: 80px; left: 12px; right: 12px; max-width: none; }
+  }
+
+  /* Tablet (769px - 1024px): 3 cột KPI */
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+    .main { padding: 24px; }
+  }
+
   /* Tabs in pages */
   .page { display: none; }
   .page.active { display: block; }
@@ -406,9 +575,19 @@
 </head>
 <body>
 
+<!-- Mobile menu button -->
+<button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Menu">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+    <line x1="3" y1="6" x2="21" y2="6"/>
+    <line x1="3" y1="12" x2="21" y2="12"/>
+    <line x1="3" y1="18" x2="21" y2="18"/>
+  </svg>
+</button>
+<div class="mobile-overlay" id="mobile-overlay"></div>
+
 <div class="app">
   <!-- SIDEBAR -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="brand">
       <div class="brand-mark">Đối soát</div>
       <div class="brand-name">Revenue Reconciliation</div>
@@ -999,6 +1178,16 @@
           <div class="kpi-value" id="return-total">—</div>
           <div class="kpi-sub">Hoàn + giao 1 phần</div>
         </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Đơn hoàn (KTC)</div>
+          <div class="kpi-value" id="return-failed">—</div>
+          <div class="kpi-sub">Giao không thành công</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Giao 1 phần</div>
+          <div class="kpi-value" id="return-partial">—</div>
+          <div class="kpi-sub">Nhận 1 phần, trả 1 phần</div>
+        </div>
         <div class="kpi-card warn">
           <div class="kpi-label">VTP báo đã trả</div>
           <div class="kpi-value" id="return-vtp-done">—</div>
@@ -1007,7 +1196,7 @@
         <div class="kpi-card">
           <div class="kpi-label">Đang trả</div>
           <div class="kpi-value" id="return-vtp-progress">—</div>
-          <div class="kpi-sub">Đang chuyển hoàn / KTC / 1P1 đang về</div>
+          <div class="kpi-sub">Đang chuyển hoàn / KTC</div>
         </div>
         <div class="kpi-card green">
           <div class="kpi-label">Đã về kho thực tế</div>
@@ -1015,9 +1204,9 @@
           <div class="kpi-sub">Shop xác nhận đã kiểm hàng</div>
         </div>
         <div class="kpi-card red">
-          <div class="kpi-label">Chênh lệch (VTP báo trả - chưa về)</div>
+          <div class="kpi-label">Chênh lệch</div>
           <div class="kpi-value" id="return-mismatch">—</div>
-          <div class="kpi-sub">Cần theo dõi với VTP</div>
+          <div class="kpi-sub">VTP báo trả nhưng chưa về</div>
         </div>
       </div>
 
@@ -2348,22 +2537,30 @@ function renderReturns() {
   // KPI 1: Tổng đơn cần trả về
   const totalReturn = returnOrders.length;
 
-  // KPI 2: VTP báo "đã trả" (hoàn thành quá trình hoàn)
+  // KPI 2: Đơn hoàn KTC (giao không thành công)
+  const failedCount = returnOrders.filter(o => o.status === 'returned' || o.status === 'failed').length;
+
+  // KPI 3: Giao 1 phần
+  const partialCount = returnOrders.filter(o => o.status === 'partial').length;
+
+  // KPI 4: VTP báo "đã trả" (hoàn thành quá trình hoàn)
   const vtpDoneReturning = returnOrders.filter(isVtpFullyReturned).length;
 
-  // KPI 3: Đang trả (chưa hoàn thành)
+  // KPI 5: Đang trả (chưa hoàn thành)
   const vtpInProgress = returnOrders.filter(isVtpReturning).length;
 
-  // KPI 4: Đã về kho thực tế (shop xác nhận)
+  // KPI 6: Đã về kho thực tế (shop xác nhận)
   const receivedActual = returnOrders.filter(o => state.returnsReceived[o.id]).length;
 
-  // KPI 5: Chênh lệch — VTP báo trả NHƯNG shop chưa nhận
+  // KPI 7: Chênh lệch — VTP báo trả NHƯNG shop chưa nhận
   const mismatch = returnOrders.filter(o =>
     isVtpFullyReturned(o) && !state.returnsReceived[o.id]
   ).length;
 
   const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
   setText('return-total', totalReturn.toLocaleString('vi-VN'));
+  setText('return-failed', failedCount.toLocaleString('vi-VN'));
+  setText('return-partial', partialCount.toLocaleString('vi-VN'));
   setText('return-vtp-done', vtpDoneReturning.toLocaleString('vi-VN'));
   setText('return-vtp-progress', vtpInProgress.toLocaleString('vi-VN'));
   setText('return-received', receivedActual.toLocaleString('vi-VN'));
@@ -3001,12 +3198,39 @@ function toast(msg) {
 // ============================================================================
 // NAVIGATION
 // ============================================================================
+// ============================================================================
+// MOBILE SIDEBAR TOGGLE
+// ============================================================================
+const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+const mobileOverlay = document.getElementById('mobile-overlay');
+const sidebar = document.getElementById('sidebar');
+
+function openSidebar() {
+  if (sidebar) sidebar.classList.add('mobile-open');
+  if (mobileOverlay) mobileOverlay.classList.add('active');
+}
+function closeSidebar() {
+  if (sidebar) sidebar.classList.remove('mobile-open');
+  if (mobileOverlay) mobileOverlay.classList.remove('active');
+}
+
+if (mobileMenuBtn) {
+  mobileMenuBtn.addEventListener('click', openSidebar);
+}
+if (mobileOverlay) {
+  mobileOverlay.addEventListener('click', closeSidebar);
+}
+
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', () => {
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     item.classList.add('active');
     document.getElementById('page-' + item.dataset.page).classList.add('active');
+    // Đóng sidebar trên mobile sau khi chọn trang
+    closeSidebar();
+    // Cuộn lên đầu trang
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 });
 
