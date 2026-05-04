@@ -995,29 +995,29 @@
       <!-- KPIs -->
       <div class="kpi-grid" style="margin-bottom: 20px;">
         <div class="kpi-card red">
-          <div class="kpi-label">Tổng đơn hoàn</div>
+          <div class="kpi-label">Tổng đơn cần trả về</div>
           <div class="kpi-value" id="return-total">—</div>
           <div class="kpi-sub">Hoàn + giao 1 phần</div>
         </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Đơn hoàn (KTC)</div>
-          <div class="kpi-value" id="return-failed">—</div>
-          <div class="kpi-sub">Giao không thành công</div>
+        <div class="kpi-card warn">
+          <div class="kpi-label">VTP báo đã trả</div>
+          <div class="kpi-value" id="return-vtp-done">—</div>
+          <div class="kpi-sub">Status "Đã trả" trên VTP</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">Giao 1 phần</div>
-          <div class="kpi-value" id="return-partial">—</div>
-          <div class="kpi-sub">Nhận 1 phần, trả 1 phần</div>
+          <div class="kpi-label">Đang trả</div>
+          <div class="kpi-value" id="return-vtp-progress">—</div>
+          <div class="kpi-sub">Đang chuyển hoàn / KTC / 1P1 đang về</div>
         </div>
         <div class="kpi-card green">
-          <div class="kpi-label">Đã về kho</div>
+          <div class="kpi-label">Đã về kho thực tế</div>
           <div class="kpi-value" id="return-received">—</div>
-          <div class="kpi-sub">Đã kiểm tra hàng</div>
+          <div class="kpi-sub">Shop xác nhận đã kiểm hàng</div>
         </div>
         <div class="kpi-card red">
-          <div class="kpi-label">Chưa về kho</div>
-          <div class="kpi-value" id="return-pending">—</div>
-          <div class="kpi-sub">Cần theo dõi</div>
+          <div class="kpi-label">Chênh lệch (VTP báo trả - chưa về)</div>
+          <div class="kpi-value" id="return-mismatch">—</div>
+          <div class="kpi-sub">Cần theo dõi với VTP</div>
         </div>
       </div>
 
@@ -1040,12 +1040,13 @@
       <!-- Filter pills -->
       <div class="filter-bar" style="margin-top: 20px;">
         <button class="pill active" data-return-filter="all">Tất cả</button>
+        <button class="pill" data-return-filter="vtp-done">VTP báo đã trả</button>
+        <button class="pill" data-return-filter="vtp-progress">Đang trả</button>
+        <button class="pill" data-return-filter="received">Đã về kho thực tế</button>
         <button class="pill" data-return-filter="not-received">Chưa về kho</button>
-        <button class="pill" data-return-filter="received">Đã về kho</button>
-        <button class="pill" data-return-filter="failed">Đơn hoàn</button>
+        <button class="pill" data-return-filter="mismatch">Chênh lệch (VTP báo trả nhưng chưa về)</button>
+        <button class="pill" data-return-filter="failed">Đơn hoàn (KTC)</button>
         <button class="pill" data-return-filter="partial">Giao 1 phần</button>
-        <button class="pill" data-return-filter="returning">Đang hoàn</button>
-        <button class="pill" data-return-filter="returned">Đã hoàn</button>
       </div>
 
       <!-- Returns table -->
@@ -2325,18 +2326,48 @@ function getReturnOrders() {
 function renderReturns() {
   const returnOrders = getReturnOrders();
 
-  // KPIs - counts only
-  const failedOrders = returnOrders.filter(o => o.status === 'returned' || o.status === 'failed');
-  const partialOrders = returnOrders.filter(o => o.status === 'partial');
-  const receivedOrders = returnOrders.filter(o => state.returnsReceived[o.id]);
-  const pendingOrders = returnOrders.filter(o => !state.returnsReceived[o.id]);
+  // Phân loại theo status thô từ VTP (nếu có)
+  const isVtpFullyReturned = (o) => {
+    // VTP báo "Đã trả" = đã hoàn thành quá trình hoàn về kho
+    const raw = (o.vtpRawStatus || '').toLowerCase().trim();
+    return raw === 'đã trả' || raw.includes('hoàn về kho');
+  };
+
+  const isVtpReturning = (o) => {
+    // Đang trên đường trả về (chưa hoàn thành)
+    const raw = (o.vtpRawStatus || '').toLowerCase().trim();
+    if (isVtpFullyReturned(o)) return false;
+    // Đang chuyển hoàn / phát thất bại / giao 1 phần đang về
+    return raw.includes('chuyển hoàn')
+        || raw.includes('phát thất bại')
+        || raw.includes('không phát')
+        || o.status === 'partial'  // partial = có 1P1 đang/đã về
+        || o.status === 'failed';
+  };
+
+  // KPI 1: Tổng đơn cần trả về
+  const totalReturn = returnOrders.length;
+
+  // KPI 2: VTP báo "đã trả" (hoàn thành quá trình hoàn)
+  const vtpDoneReturning = returnOrders.filter(isVtpFullyReturned).length;
+
+  // KPI 3: Đang trả (chưa hoàn thành)
+  const vtpInProgress = returnOrders.filter(isVtpReturning).length;
+
+  // KPI 4: Đã về kho thực tế (shop xác nhận)
+  const receivedActual = returnOrders.filter(o => state.returnsReceived[o.id]).length;
+
+  // KPI 5: Chênh lệch — VTP báo trả NHƯNG shop chưa nhận
+  const mismatch = returnOrders.filter(o =>
+    isVtpFullyReturned(o) && !state.returnsReceived[o.id]
+  ).length;
 
   const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-  setText('return-total', returnOrders.length.toLocaleString('vi-VN'));
-  setText('return-failed', failedOrders.length.toLocaleString('vi-VN'));
-  setText('return-partial', partialOrders.length.toLocaleString('vi-VN'));
-  setText('return-received', receivedOrders.length.toLocaleString('vi-VN'));
-  setText('return-pending', pendingOrders.length.toLocaleString('vi-VN'));
+  setText('return-total', totalReturn.toLocaleString('vi-VN'));
+  setText('return-vtp-done', vtpDoneReturning.toLocaleString('vi-VN'));
+  setText('return-vtp-progress', vtpInProgress.toLocaleString('vi-VN'));
+  setText('return-received', receivedActual.toLocaleString('vi-VN'));
+  setText('return-mismatch', mismatch.toLocaleString('vi-VN'));
 
   // Filtered table
   let filtered = returnOrders.slice();
@@ -2345,8 +2376,9 @@ function renderReturns() {
   else if (f === 'received') filtered = filtered.filter(o => state.returnsReceived[o.id]);
   else if (f === 'failed') filtered = filtered.filter(o => o.status === 'returned' || o.status === 'failed');
   else if (f === 'partial') filtered = filtered.filter(o => o.status === 'partial');
-  else if (f === 'returning') filtered = filtered.filter(o => o.vtpReturnStatus === 'returning');
-  else if (f === 'returned') filtered = filtered.filter(o => o.vtpReturnStatus === 'returned');
+  else if (f === 'vtp-done') filtered = filtered.filter(isVtpFullyReturned);
+  else if (f === 'vtp-progress') filtered = filtered.filter(isVtpReturning);
+  else if (f === 'mismatch') filtered = filtered.filter(o => isVtpFullyReturned(o) && !state.returnsReceived[o.id]);
 
   filtered.sort((a, b) => b.date.localeCompare(a.date));
 
@@ -2364,11 +2396,22 @@ function renderReturns() {
       const typeLabel = o.status === 'partial'
         ? '<span class="badge warn">Giao 1 phần</span>'
         : '<span class="badge danger">Đơn hoàn</span>';
-      const vtpStatus = o.vtpReturnStatus === 'returned'
-        ? '<span class="badge success">Đã hoàn</span>'
-        : o.vtpReturnStatus === 'returning'
-        ? '<span class="badge warn">Đang hoàn</span>'
-        : '<span class="badge" style="background:var(--surface-2); color:var(--text-muted)">—</span>';
+      // Hiển thị status THÔ từ VTP nếu có (chính xác hơn)
+      let vtpStatus;
+      const raw = (o.vtpRawStatus || '').toLowerCase().trim();
+      if (raw === 'đã trả' || raw.includes('hoàn về kho')) {
+        vtpStatus = `<span class="badge success">${o.vtpRawStatus}</span>`;
+      } else if (raw.includes('chuyển hoàn') || raw.includes('phát thất bại')) {
+        vtpStatus = `<span class="badge warn">${o.vtpRawStatus}</span>`;
+      } else if (o.vtpRawStatus) {
+        vtpStatus = `<span class="badge" style="background:var(--surface-2); color:var(--text-muted)">${o.vtpRawStatus}</span>`;
+      } else if (o.vtpReturnStatus === 'returned') {
+        vtpStatus = '<span class="badge success">Đã hoàn</span>';
+      } else if (o.vtpReturnStatus === 'returning') {
+        vtpStatus = '<span class="badge warn">Đang hoàn</span>';
+      } else {
+        vtpStatus = '<span class="badge" style="background:var(--surface-2); color:var(--text-muted)">—</span>';
+      }
       const received = state.returnsReceived[o.id];
       const warehouseStatus = received
         ? `<span class="badge success">Đã về kho</span> <span style="font-size: 11px; color: var(--text-dim); margin-left: 4px;">${fmtDate(received.date)}</span> <button class="link" style="margin-left: 6px;" onclick="markReturnNotReceived('${o.id}')">Hủy</button>`
@@ -3158,14 +3201,29 @@ function applyVTPDataToOrders(vtpOrders) {
   };
 
   // Map status text VTP → app status
+  // Thứ tự check QUAN TRỌNG: status cụ thể trước, generic sau
   const mapStatus = (vtpStatus) => {
-    const s = vtpStatus.toLowerCase();
-    if (s.includes('giao thành công') || s.includes('phát thành công')) return 'success';
+    const s = vtpStatus.toLowerCase().trim();
+
+    // 1. HỦY (kiểm tra trước vì có thể chứa cả "lấy" / "thành công")
+    if (s.includes('hủy lấy') || s.includes('huỷ lấy')) return 'cancelled';
+    if (s.includes('shop hủy') || s.includes('vtp hủy') || s === 'hủy đơn') return 'cancelled';
+
+    // 2. HOÀN (đơn đã trả về shop)
     if (s.includes('chuyển hoàn') || s.includes('hoàn về kho')) return 'returned';
+    if (s === 'đã trả' || s === 'da tra') return 'returned';
     if (s.includes('phát thất bại') || s.includes('không phát')) return 'failed';
-    if (s.includes('hủy') || s.includes('huỷ')) return 'cancelled';
-    if (s.includes('đang giao') || s.includes('phát hàng')) return 'shipping';
-    if (s.includes('lấy hàng') || s.includes('khai thác') || s.includes('điều phối')) return 'sent';
+
+    // 3. THÀNH CÔNG
+    if (s.includes('giao thành công') || s.includes('phát thành công')) return 'success';
+    if (s.includes('ký nhận')) return 'success';
+
+    // 4. ĐANG XỬ LÝ
+    if (s.includes('đang giao') || s.includes('đang phát') || s.includes('phát hàng')) return 'shipping';
+    if (s.includes('đang vận chuyển')) return 'shipping';
+    if (s.includes('lấy hàng') || s.includes('khai thác') || s.includes('điều phối') ||
+        s.includes('đã lấy') || s.includes('đã tiếp nhận') || s.includes('chờ lấy')) return 'sent';
+
     return 'shipping'; // default
   };
 
@@ -3194,6 +3252,7 @@ function applyVTPDataToOrders(vtpOrders) {
       });
 
       o.status = appStatus;
+      o.vtpRawStatus = v.status;  // Lưu status thô từ VTP để phân biệt "Đã trả" vs "Đang chuyển hoàn"
       o.actualRevenue = v.cod_collected;
       o.shipFee = v.ship_fee;
       o.codFixedOnVtp = v.cod_collected !== v.order_value;
@@ -3218,6 +3277,7 @@ function applyVTPDataToOrders(vtpOrders) {
         items: [{ productId: 'unknown', name: v.product || 'Không rõ', qty: 1, unitPrice: v.order_value, unitCost: 0 }],
         pancakeRevenue: v.order_value,
         status: appStatus,
+        vtpRawStatus: v.status,  // Lưu status thô từ VTP
         sentToVtp: true,
         actualRevenue: v.cod_collected,
         shipFee: v.ship_fee,
