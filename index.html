@@ -701,6 +701,11 @@
           <div class="kpi-sub">ROAS: <span id="kpi-roas">—</span></div>
         </div>
         <div class="kpi-card">
+          <div class="kpi-label">Chi phí vận chuyển</div>
+          <div class="kpi-value" id="kpi-shipping-cost">—</div>
+          <div class="kpi-sub">Phí ship + phí hoàn</div>
+        </div>
+        <div class="kpi-card">
           <div class="kpi-label">Chi phí cố định</div>
           <div class="kpi-value" id="kpi-fixed-cost">—</div>
           <div class="kpi-sub">Phân bổ từ kho, lương, ...</div>
@@ -1683,15 +1688,14 @@ async function loadState() {
   const hasInitFlag = localStorage.getItem('doi-soat-initialized');
   if (state.products.length === 0 && state.orders.length === 0 && !hasInitFlag) {
     generateSampleData(true);
-    try { localStorage.setItem('doi-soat-initialized', '1'); } catch(e) {}
-  }
-  if (state.fixedCosts.length === 0) {
+    // Tạo cả fixed costs mẫu CHỈ TRONG LẦN ĐẦU
     state.fixedCosts = [
       { id: 'fc1', name: 'Thuê kho', amount: 3000000, cycle: 'monthly', note: 'Kho 30m² quận 7' },
       { id: 'fc2', name: 'Lương nhân viên đóng gói', amount: 5000000, cycle: 'monthly', note: '1 nhân viên full-time' },
       { id: 'fc3', name: 'Điện nước', amount: 500000, cycle: 'monthly', note: '' },
       { id: 'fc4', name: 'Bao bì đóng gói', amount: 800000, cycle: 'monthly', note: 'Hộp, băng keo, túi' },
     ];
+    try { localStorage.setItem('doi-soat-initialized', '1'); } catch(e) {}
   }
 }
 
@@ -1812,6 +1816,7 @@ function generateSampleData(silent) {
         returnFee,
         partialDetectionReasons,
         codFixedOnVtp,
+        source: sentToVtp ? 'pancake+vtp' : 'pancake',  // Có ở Pancake (và có thể đã bắn VTP)
         vtpReturnStatus: (status === 'returned' || status === 'failed' || status === 'partial')
           ? (Math.random() < 0.6 ? 'returning' : 'returned')
           : null
@@ -1998,37 +2003,69 @@ function renderDashboard() {
   const profit = totals.actualRevenue - totalCost;
   const grossProfit = totals.actualRevenue - totals.adsCost - totals.cogs - totals.shipFee - totals.returnFee;
   const margin = totals.actualRevenue > 0 ? (profit / totals.actualRevenue) * 100 : 0;
-  const successRate = totals.orders > 0 ? (totals.successCount / totals.orders) * 100 : 0;
   const sentRate = totals.orders > 0 ? (totals.sentCount / totals.orders) * 100 : 0;
   const roas = totals.adsCost > 0 ? totals.actualRevenue / totals.adsCost : 0;
 
+  // Tính riêng các metrics từ đơn THEO NGUỒN
+  // Đơn có ở Pancake = source 'pancake' hoặc 'pancake+vtp'
+  const isPancakeOrder = (o) => {
+    if (state.dateFrom && o.date < state.dateFrom) return false;
+    if (state.dateTo && o.date > state.dateTo) return false;
+    return !o.source || o.source === 'pancake' || o.source === 'pancake+vtp';
+  };
+  const pancakeOrders = state.orders.filter(isPancakeOrder);
+  const pancakeOrderCount = pancakeOrders.length;
+  const pancakeRevenueSum = pancakeOrders.reduce((s, o) => s + (o.pancakeRevenue || 0), 0);
+  const pancakeSentCount = pancakeOrders.filter(o => o.sentToVtp).length;
+  const pancakeSuccessCount = pancakeOrders.filter(o => o.status === 'success').length;
+  const pancakeReturnCount = pancakeOrders.filter(o => o.status === 'returned' || o.status === 'failed' || o.status === 'partial').length;
+  const pancakeCancelCount = pancakeOrders.filter(o => o.status === 'cancelled').length;
+  const pancakeShippingCount = pancakeOrders.filter(o => o.status === 'shipping').length;
+  const pancakeSentRate = pancakeOrderCount > 0 ? (pancakeSentCount / pancakeOrderCount) * 100 : 0;
+  const pancakeSuccessRate = pancakeOrderCount > 0 ? (pancakeSuccessCount / pancakeOrderCount) * 100 : 0;
+
+  // Helper hiển thị: "—" nếu không có data
+  const fmtOrEmpty = (val, hasData) => hasData ? fmtShort(val) : '—';
+  const fmtNumOrEmpty = (val, hasData) => hasData ? val.toLocaleString('vi-VN') : '—';
+  const fmtPctOrEmpty = (val, hasData) => hasData ? fmtPct(val) : '—';
+  const hasPancake = pancakeOrderCount > 0;
+  const hasAds = totals.adsCost > 0;
+  const hasShipping = totals.shipFee > 0 || totals.returnFee > 0;
+
   // Financial KPIs
-  document.getElementById('kpi-revenue-total').textContent = fmtShort(totals.pancakeRevenue);
-  document.getElementById('kpi-revenue-actual').textContent = fmtShort(totals.actualRevenue);
-  document.getElementById('kpi-ads').textContent = fmtShort(totals.adsCost);
-  document.getElementById('kpi-roas').textContent = roas.toFixed(2) + 'x';
-  document.getElementById('kpi-cost-total').textContent = fmtShort(totalCost);
-  document.getElementById('kpi-profit').textContent = fmtShort(profit);
+  document.getElementById('kpi-revenue-total').textContent = fmtOrEmpty(pancakeRevenueSum, hasPancake);
+  document.getElementById('kpi-revenue-actual').textContent = fmtOrEmpty(totals.actualRevenue, totals.actualRevenue > 0 || totals.orders > 0);
+  document.getElementById('kpi-ads').textContent = fmtOrEmpty(totals.adsCost, hasAds);
+  document.getElementById('kpi-roas').textContent = hasAds ? roas.toFixed(2) + 'x' : '—';
+  // Chi phí vận chuyển (mới)
+  const elShip = document.getElementById('kpi-shipping-cost');
+  if (elShip) elShip.textContent = fmtOrEmpty(totals.shipFee + totals.returnFee, hasShipping);
+  document.getElementById('kpi-cost-total').textContent = fmtOrEmpty(totalCost, totalCost > 0);
+  document.getElementById('kpi-profit').textContent = fmtOrEmpty(profit, totals.actualRevenue > 0 || totalCost > 0);
   const profitEl = document.getElementById('kpi-profit');
   profitEl.className = 'kpi-value ' + (profit >= 0 ? 'pos' : 'neg');
-  document.getElementById('kpi-margin').textContent = fmtPct(margin);
+  document.getElementById('kpi-margin').textContent = fmtPctOrEmpty(margin, totals.actualRevenue > 0);
 
   // Fixed cost KPI (if element exists)
   const elFixed = document.getElementById('kpi-fixed-cost');
-  if (elFixed) elFixed.textContent = fmtShort(totals.fixedCost);
+  if (elFixed) elFixed.textContent = fmtOrEmpty(totals.fixedCost, state.fixedCosts.length > 0);
   const elGross = document.getElementById('kpi-gross-profit');
   if (elGross) {
-    elGross.textContent = fmtShort(grossProfit);
+    elGross.textContent = fmtOrEmpty(grossProfit, totals.actualRevenue > 0 || totals.adsCost > 0);
     elGross.className = 'kpi-value ' + (grossProfit >= 0 ? 'pos' : 'neg');
   }
 
-  // Order count KPIs
-  document.getElementById('kpi-orders-total').textContent = totals.orders.toLocaleString('vi-VN');
-  document.getElementById('kpi-orders-sent').textContent = totals.sentCount.toLocaleString('vi-VN');
-  document.getElementById('kpi-sent-rate').textContent = fmtPct(sentRate);
+  // Order count KPIs — phân biệt theo nguồn
+  // Tổng đơn Pancake: chỉ đếm đơn có ở Pancake
+  document.getElementById('kpi-orders-total').textContent = fmtNumOrEmpty(pancakeOrderCount, hasPancake);
+  // Đã bắn VTP: dùng số đơn pancake đã bắn
+  document.getElementById('kpi-orders-sent').textContent = fmtNumOrEmpty(pancakeSentCount, hasPancake);
+  document.getElementById('kpi-sent-rate').textContent = fmtPctOrEmpty(pancakeSentRate, hasPancake);
+  // Còn các status: dùng số toàn bộ (cả pancake và vtp_only)
   document.getElementById('kpi-orders-shipping').textContent = totals.shippingCount.toLocaleString('vi-VN');
   document.getElementById('kpi-orders-success').textContent = totals.successCount.toLocaleString('vi-VN');
-  document.getElementById('kpi-success-rate').textContent = fmtPct(successRate);
+  // Success rate: trên tổng đơn pancake (vì Pancake là nguồn)
+  document.getElementById('kpi-success-rate').textContent = fmtPctOrEmpty(pancakeSuccessRate, hasPancake);
   document.getElementById('kpi-orders-returned').textContent = totals.returnLikeCount.toLocaleString('vi-VN');
   document.getElementById('kpi-orders-cancelled').textContent = totals.cancelledCount.toLocaleString('vi-VN');
 
@@ -3663,6 +3700,8 @@ function applyVTPDataToOrders(vtpOrders) {
       o.actualRevenue = v.cod_collected;
       o.shipFee = v.ship_fee;
       o.codFixedOnVtp = v.cod_collected !== v.order_value;
+      // Đánh dấu source: đơn này có ở cả Pancake và VTP
+      o.source = 'pancake+vtp';
 
       const after = JSON.stringify({
         status: o.status,
@@ -3682,7 +3721,8 @@ function applyVTPDataToOrders(vtpOrders) {
         customerPhone: v.receiver_phone,
         vtpTracking: v.tracking,
         items: [{ productId: 'unknown', name: v.product || 'Không rõ', qty: 1, unitPrice: v.order_value, unitCost: 0 }],
-        pancakeRevenue: v.order_value,
+        pancakeRevenue: 0,  // KHÔNG có ở Pancake → DT Pancake = 0
+        vtpOrderValue: v.order_value,  // Giá trị VTP ghi (để display riêng)
         status: appStatus,
         vtpRawStatus: v.status,  // Lưu status thô từ VTP
         sentToVtp: true,
@@ -3692,6 +3732,7 @@ function applyVTPDataToOrders(vtpOrders) {
         codFixedOnVtp: v.cod_collected !== v.order_value,
         partialDetectionReasons: [],
         vtpReturnStatus: null,
+        source: 'vtp_only',  // Nguồn dữ liệu: chỉ từ VTP, không có ở Pancake
         isUnknownVtp: true  // đánh dấu đơn lạ
       };
       state.orders.push(newOrder);
