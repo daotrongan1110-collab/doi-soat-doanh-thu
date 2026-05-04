@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
     --bg: #0F0E0C;
@@ -741,15 +742,16 @@
           <div class="card-header">
             <div>
               <div class="card-title">Từ Viettel Post</div>
-              <div class="card-subtitle">Báo cáo trạng thái vận chuyển</div>
+              <div class="card-subtitle">File Excel "Danh sách vận đơn" tải từ partner.viettelpost.vn</div>
             </div>
           </div>
-          <div class="drop-zone" onclick="document.getElementById('file-vtp').click()">
+          <div class="drop-zone" id="vtp-drop-zone" onclick="document.getElementById('file-vtp').click()">
             <span class="drop-zone-icon">⬆</span>
-            <div class="drop-zone-title">Kéo file vào đây hoặc bấm để chọn</div>
-            <div class="drop-zone-hint">CSV · Excel · TXT</div>
-            <input type="file" id="file-vtp" accept=".csv,.xlsx,.txt" style="display: none;">
+            <div class="drop-zone-title">Kéo file Excel VTP vào đây hoặc bấm để chọn</div>
+            <div class="drop-zone-hint">.xlsx — file xuất từ "Quản lý vận đơn" → "Xuất Excel"</div>
+            <input type="file" id="file-vtp" accept=".xlsx,.xls" style="display: none;">
           </div>
+          <div id="vtp-upload-result" style="margin-top: 14px; display: none;"></div>
         </div>
       </div>
 
@@ -2999,16 +3001,351 @@ document.getElementById('date-to').addEventListener('change', (e) => {
   renderDashboard(); renderDaily();
 });
 
-['file-pancake','file-vtp'].forEach(id => {
-  const el = document.getElementById(id);
-  if (el) {
-    el.addEventListener('change', (e) => {
-      if (e.target.files.length) {
-        toast('Đã nhận file: ' + e.target.files[0].name + ' (demo — chưa parse)');
+// File handler cho Pancake (chưa parse, sẽ làm khi có file mẫu)
+const pancakeFileEl = document.getElementById('file-pancake');
+if (pancakeFileEl) {
+  pancakeFileEl.addEventListener('change', (e) => {
+    if (e.target.files.length) {
+      toast('Đã nhận file Pancake: ' + e.target.files[0].name + ' (chưa parse — cần file mẫu)');
+    }
+  });
+}
+
+// VTP Excel parser — XỬ LÝ THẬT
+const vtpFileEl = document.getElementById('file-vtp');
+if (vtpFileEl) {
+  vtpFileEl.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    parseVTPExcelFile(file);
+  });
+}
+
+// Drag & drop cho VTP
+const vtpDropZone = document.getElementById('vtp-drop-zone');
+if (vtpDropZone) {
+  vtpDropZone.addEventListener('dragover', (e) => { e.preventDefault(); vtpDropZone.classList.add('dragover'); });
+  vtpDropZone.addEventListener('dragleave', () => vtpDropZone.classList.remove('dragover'));
+  vtpDropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    vtpDropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) parseVTPExcelFile(e.dataTransfer.files[0]);
+  });
+}
+
+// ============================================================================
+// VTP EXCEL PARSER — Xử lý file Excel "Danh sách vận đơn" của VTP
+// ============================================================================
+function parseVTPExcelFile(file) {
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      const data = new Uint8Array(evt.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+
+      // VTP file: header ở dòng 9 (index 8), dùng range từ dòng 9
+      const rows = XLSX.utils.sheet_to_json(sheet, {
+        header: 1,  // mảng các mảng
+        defval: '',
+        blankrows: false
+      });
+
+      // Tìm dòng header (chứa "Mã Vận Đơn")
+      let headerRowIdx = -1;
+      for (let i = 0; i < Math.min(15, rows.length); i++) {
+        if (rows[i] && rows[i].some(cell => String(cell).trim() === 'Mã Vận Đơn')) {
+          headerRowIdx = i;
+          break;
+        }
       }
-    });
+
+      if (headerRowIdx === -1) {
+        showVTPResult('error', 'Không tìm thấy dòng header trong file. File có đúng là "Danh sách vận đơn" từ VTP không?');
+        return;
+      }
+
+      const header = rows[headerRowIdx].map(h => String(h).trim());
+      const dataRows = rows.slice(headerRowIdx + 1).filter(r => r[0] && r[1]); // có STT và mã VĐ
+
+      if (dataRows.length === 0) {
+        showVTPResult('warn', 'File không có đơn nào.');
+        return;
+      }
+
+      // Map các cột cần thiết
+      const colIdx = {
+        tracking: header.indexOf('Mã Vận Đơn'),
+        order_ref: header.indexOf('Mã đơn hàng'),
+        created_date: header.indexOf('Ngày tạo'),
+        receiver_name: header.indexOf('Người nhận'),
+        receiver_phone: header.indexOf('ĐT Nhận'),
+        product: header.indexOf('Tên Hàng'),
+        order_value: header.indexOf('Giá trị'),
+        cod_collected: header.indexOf('Tiền thu hộ (4)'),
+        ship_fee: header.indexOf('Tổng phí (9)= (3)+(5)+(6)+(7)-(8)'),
+        status: header.indexOf('Trạng Thái'),
+        cod_payment_status: header.indexOf('Trạng thái đối soát COD'),
+        return_shipment: header.indexOf('Đơn chuyển hoàn')
+      };
+
+      // Validate các cột bắt buộc
+      const missing = [];
+      ['tracking', 'cod_collected', 'status'].forEach(k => {
+        if (colIdx[k] === -1) missing.push(k);
+      });
+      if (missing.length > 0) {
+        showVTPResult('error', 'File thiếu cột: ' + missing.join(', '));
+        return;
+      }
+
+      // Parse từng dòng thành object
+      const vtpOrders = dataRows.map(row => {
+        const get = (key) => colIdx[key] !== -1 ? String(row[colIdx[key]] || '').trim() : '';
+        const getNum = (key) => {
+          const val = get(key);
+          if (!val) return 0;
+          // Xử lý số có dấu phẩy ngăn cách hàng nghìn (ví dụ "800,000")
+          return parseInt(String(val).replace(/[^\d-]/g, '')) || 0;
+        };
+
+        return {
+          tracking: get('tracking'),
+          order_ref: get('order_ref'),
+          created_date: get('created_date'),
+          receiver_name: get('receiver_name'),
+          receiver_phone: get('receiver_phone'),
+          product: get('product'),
+          order_value: getNum('order_value'),
+          cod_collected: getNum('cod_collected'),
+          ship_fee: getNum('ship_fee'),
+          status: get('status'),
+          cod_payment_status: get('cod_payment_status'),
+          return_shipment: get('return_shipment')
+        };
+      });
+
+      // Áp dụng vào state.orders
+      const result = applyVTPDataToOrders(vtpOrders);
+      showVTPResult('success', result);
+
+      saveState();
+      renderAll();
+
+    } catch (err) {
+      showVTPResult('error', 'Lỗi đọc file: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ============================================================================
+// ÁP DỤNG DATA VTP VÀO STATE — Logic upsert + phát hiện 1P1
+// ============================================================================
+function applyVTPDataToOrders(vtpOrders) {
+  const stats = {
+    total: vtpOrders.length,
+    inserted: 0,
+    updated: 0,
+    unchanged: 0,
+    partialDetected: 0,
+    orphanReturns: 0,
+    unknownOrders: 0,
+    partialList: [],
+    unknownList: [],
+    orphanList: []
+  };
+
+  // Map status text VTP → app status
+  const mapStatus = (vtpStatus) => {
+    const s = vtpStatus.toLowerCase();
+    if (s.includes('giao thành công') || s.includes('phát thành công')) return 'success';
+    if (s.includes('chuyển hoàn') || s.includes('hoàn về kho')) return 'returned';
+    if (s.includes('phát thất bại') || s.includes('không phát')) return 'failed';
+    if (s.includes('hủy') || s.includes('huỷ')) return 'cancelled';
+    if (s.includes('đang giao') || s.includes('phát hàng')) return 'shipping';
+    if (s.includes('lấy hàng') || s.includes('khai thác') || s.includes('điều phối')) return 'sent';
+    return 'shipping'; // default
+  };
+
+  // Index hiện tại theo vtpTracking
+  const ordersByTracking = {};
+  state.orders.forEach((o, idx) => {
+    if (o.vtpTracking) ordersByTracking[o.vtpTracking] = idx;
+  });
+
+  // Tách đơn 1P1 và đơn chính
+  const mainVtpOrders = vtpOrders.filter(v => !/1P1$/i.test(v.tracking));
+  const returnVtpOrders = vtpOrders.filter(v => /1P1$/i.test(v.tracking));
+
+  // ===== BƯỚC 1: Upsert đơn chính =====
+  mainVtpOrders.forEach(v => {
+    const existingIdx = ordersByTracking[v.tracking];
+    const appStatus = mapStatus(v.status);
+
+    if (existingIdx !== undefined) {
+      // Đã có → cập nhật
+      const o = state.orders[existingIdx];
+      const before = JSON.stringify({
+        status: o.status,
+        actualRevenue: o.actualRevenue,
+        shipFee: o.shipFee
+      });
+
+      o.status = appStatus;
+      o.actualRevenue = v.cod_collected;
+      o.shipFee = v.ship_fee;
+      o.codFixedOnVtp = v.cod_collected !== v.order_value;
+
+      const after = JSON.stringify({
+        status: o.status,
+        actualRevenue: o.actualRevenue,
+        shipFee: o.shipFee
+      });
+
+      if (before !== after) stats.updated++;
+      else stats.unchanged++;
+    } else {
+      // Chưa có → đơn lạ (có ở VTP nhưng không có ở Pancake)
+      // Vẫn thêm vào để theo dõi
+      const newOrder = {
+        id: 'VTP_' + v.tracking,  // tạm dùng prefix VTP_ để phân biệt
+        date: parseVTPDate(v.created_date) || new Date().toISOString().split('T')[0],
+        customer: v.receiver_name,
+        customerPhone: v.receiver_phone,
+        vtpTracking: v.tracking,
+        items: [{ productId: 'unknown', name: v.product || 'Không rõ', qty: 1, unitPrice: v.order_value, unitCost: 0 }],
+        pancakeRevenue: v.order_value,
+        status: appStatus,
+        sentToVtp: true,
+        actualRevenue: v.cod_collected,
+        shipFee: v.ship_fee,
+        returnFee: 0,
+        codFixedOnVtp: v.cod_collected !== v.order_value,
+        partialDetectionReasons: [],
+        vtpReturnStatus: null,
+        isUnknownVtp: true  // đánh dấu đơn lạ
+      };
+      state.orders.push(newOrder);
+      ordersByTracking[v.tracking] = state.orders.length - 1;
+      stats.inserted++;
+      stats.unknownOrders++;
+      stats.unknownList.push(v.tracking);
+    }
+  });
+
+  // ===== BƯỚC 2: Xử lý đơn 1P1 =====
+  returnVtpOrders.forEach(rs => {
+    // Tìm đơn gốc: bỏ "1P1" cuối
+    const originalTracking = rs.tracking.replace(/1P1$/i, '');
+    let originalIdx = ordersByTracking[originalTracking];
+
+    // Fallback: tìm theo SĐT người nhận
+    if (originalIdx === undefined && rs.receiver_phone) {
+      const found = state.orders.findIndex(o =>
+        o.customerPhone === rs.receiver_phone &&
+        o.vtpTracking &&
+        !/1P1$/i.test(o.vtpTracking)
+      );
+      if (found !== -1) originalIdx = found;
+    }
+
+    if (originalIdx !== undefined) {
+      const original = state.orders[originalIdx];
+      // Đánh dấu đơn gốc là partial
+      original.status = 'partial';
+      original.partialDetectionReasons = ['has_return_shipment_1p1'];
+      original.codFixedOnVtp = original.actualRevenue !== original.pancakeRevenue;
+      original.vtpReturnStatus = 'returning'; // có thể update khi 1P1 đã về kho
+      stats.partialDetected++;
+      stats.partialList.push({
+        original: original.vtpTracking,
+        return: rs.tracking,
+        revenue: original.actualRevenue
+      });
+    } else {
+      stats.orphanReturns++;
+      stats.orphanList.push(rs.tracking);
+    }
+  });
+
+  return stats;
+}
+
+// Parse ngày tạo VTP (format: "17/04/2026 18:17:33" hoặc "17/04/2026")
+function parseVTPDate(dateStr) {
+  if (!dateStr) return null;
+  const match = String(dateStr).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (!match) return null;
+  return `${match[3]}-${match[2].padStart(2,'0')}-${match[1].padStart(2,'0')}`;
+}
+
+// ============================================================================
+// HIỂN THỊ KẾT QUẢ UPLOAD
+// ============================================================================
+function showVTPResult(type, content) {
+  const el = document.getElementById('vtp-upload-result');
+  if (!el) return;
+
+  if (type === 'error') {
+    el.innerHTML = `
+      <div style="padding: 14px 16px; background: var(--red-soft); border-left: 3px solid var(--red); border-radius: 6px; color: var(--text);">
+        <strong style="color: var(--red);">❌ Lỗi:</strong> ${content}
+      </div>
+    `;
+  } else if (type === 'warn') {
+    el.innerHTML = `
+      <div style="padding: 14px 16px; background: var(--accent-soft); border-left: 3px solid var(--accent); border-radius: 6px;">
+        <strong style="color: var(--accent);">⚠️</strong> ${content}
+      </div>
+    `;
+  } else if (type === 'success' && typeof content === 'object') {
+    const s = content;
+    let html = `
+      <div style="padding: 16px; background: var(--green-soft); border-left: 3px solid var(--green); border-radius: 6px;">
+        <div style="font-weight: 500; color: var(--green); margin-bottom: 10px;">✅ Đã xử lý ${s.total} đơn từ VTP</div>
+        <div style="font-size: 13px; line-height: 1.8; color: var(--text);">
+          • <strong>${s.inserted}</strong> đơn mới được thêm<br>
+          • <strong>${s.updated}</strong> đơn được cập nhật<br>
+          • <strong>${s.unchanged}</strong> đơn không có thay đổi<br>
+          • <strong style="color: var(--accent);">${s.partialDetected}</strong> đơn 1P1 phát hiện → đơn gốc đánh dấu "giao 1 phần"<br>
+          ${s.unknownOrders > 0 ? `• <strong style="color: var(--red);">${s.unknownOrders}</strong> đơn lạ (có ở VTP nhưng không có ở Pancake)<br>` : ''}
+          ${s.orphanReturns > 0 ? `• <strong style="color: var(--red);">${s.orphanReturns}</strong> đơn 1P1 mồ côi (không tìm thấy đơn gốc)<br>` : ''}
+        </div>
+    `;
+
+    if (s.partialList.length > 0 && s.partialList.length <= 10) {
+      html += `<div style="margin-top: 10px; font-size: 12px; color: var(--text-muted);"><strong>Đơn 1 phần phát hiện:</strong><br>`;
+      s.partialList.forEach(p => {
+        html += `&nbsp;&nbsp;${p.original} (thu ${(p.revenue || 0).toLocaleString('vi-VN')}đ)<br>`;
+      });
+      html += `</div>`;
+    }
+
+    if (s.unknownList.length > 0 && s.unknownList.length <= 10) {
+      html += `<div style="margin-top: 10px; font-size: 12px; color: var(--text-muted);"><strong>Đơn lạ:</strong><br>`;
+      s.unknownList.forEach(t => {
+        html += `&nbsp;&nbsp;${t}<br>`;
+      });
+      html += `</div>`;
+    }
+
+    if (s.orphanList.length > 0 && s.orphanList.length <= 10) {
+      html += `<div style="margin-top: 10px; font-size: 12px; color: var(--text-muted);"><strong>1P1 mồ côi:</strong><br>`;
+      s.orphanList.forEach(t => {
+        html += `&nbsp;&nbsp;${t}<br>`;
+      });
+      html += `</div>`;
+    }
+
+    html += `</div>`;
+    el.innerHTML = html;
   }
-});
+
+  el.style.display = 'block';
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
 
 // Facebook Ads CSV parser
 const fbFileEl = document.getElementById('file-fb-ads');
