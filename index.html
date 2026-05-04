@@ -3399,16 +3399,19 @@ function parseVTPExcelFile(file) {
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
 
-      // VTP file: header ở dòng 9 (index 8), dùng range từ dòng 9
+      // Đọc TOÀN BỘ rows, không lọc blank ở SheetJS
+      // Dùng range đầy đủ và defval='' để cell trống trả về '' thay vì undefined
       const rows = XLSX.utils.sheet_to_json(sheet, {
-        header: 1,  // mảng các mảng
+        header: 1,
         defval: '',
-        blankrows: false
+        raw: true  // giữ nguyên giá trị (số là số, không bị auto-convert)
       });
+
+      console.log('[VTP Parser] Total rows in file:', rows.length);
 
       // Tìm dòng header (chứa "Mã Vận Đơn")
       let headerRowIdx = -1;
-      for (let i = 0; i < Math.min(15, rows.length); i++) {
+      for (let i = 0; i < Math.min(20, rows.length); i++) {
         if (rows[i] && rows[i].some(cell => String(cell).trim() === 'Mã Vận Đơn')) {
           headerRowIdx = i;
           break;
@@ -3416,15 +3419,39 @@ function parseVTPExcelFile(file) {
       }
 
       if (headerRowIdx === -1) {
-        showVTPResult('error', 'Không tìm thấy dòng header trong file. File có đúng là "Danh sách vận đơn" từ VTP không?');
+        showVTPResult('error', 'Không tìm thấy dòng header "Mã Vận Đơn" trong file. File có đúng là "Danh sách vận đơn" từ VTP không?');
         return;
       }
 
+      console.log('[VTP Parser] Header row index:', headerRowIdx);
+      console.log('[VTP Parser] Total data rows after header:', rows.length - headerRowIdx - 1);
+
       const header = rows[headerRowIdx].map(h => String(h).trim());
-      const dataRows = rows.slice(headerRowIdx + 1).filter(r => r[0] && r[1]); // có STT và mã VĐ
+
+      // Tìm index cột "Mã Vận Đơn" trong header (vị trí cột này có thể khác giữa các phiên bản file)
+      const trackingColIdx = header.indexOf('Mã Vận Đơn');
+      if (trackingColIdx === -1) {
+        showVTPResult('error', 'Không tìm thấy cột "Mã Vận Đơn" trong file.');
+        return;
+      }
+
+      // Lọc dòng có Mã Vận Đơn (chỉ field này thực sự bắt buộc)
+      const dataRows = rows.slice(headerRowIdx + 1).filter(r => {
+        if (!Array.isArray(r)) return false;
+        const tracking = r[trackingColIdx];
+        if (tracking === null || tracking === undefined || tracking === '') return false;
+        const trackingStr = String(tracking).trim();
+        if (!trackingStr) return false;
+        // Loại các dòng tổng kết / footer
+        if (trackingStr.toLowerCase().includes('tổng') ||
+            trackingStr.toLowerCase().includes('total')) return false;
+        return true;
+      });
+
+      console.log('[VTP Parser] Valid order rows:', dataRows.length);
 
       if (dataRows.length === 0) {
-        showVTPResult('warn', 'File không có đơn nào.');
+        showVTPResult('warn', 'File không có đơn nào (không tìm thấy dòng nào có Mã Vận Đơn hợp lệ).');
         return;
       }
 
