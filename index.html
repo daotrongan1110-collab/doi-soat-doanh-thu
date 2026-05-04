@@ -752,6 +752,11 @@
           <div class="kpi-value" id="kpi-orders-cancelled">—</div>
           <div class="kpi-sub">Hủy trước khi giao</div>
         </div>
+        <div class="kpi-card warn" style="cursor: pointer;" onclick="goToOrdersFilter('tc-zero-cod')">
+          <div class="kpi-label">⚠ TC nhưng COD = 0</div>
+          <div class="kpi-value" id="kpi-orders-anomaly">—</div>
+          <div class="kpi-sub">Bấm để xem chi tiết</div>
+        </div>
       </div>
 
       <!-- Charts -->
@@ -859,6 +864,8 @@
         <button class="pill" data-filter="partial">Giao 1 phần</button>
         <button class="pill" data-filter="cancelled">Hủy</button>
         <button class="pill" data-filter="mismatch">⚠ Lệch đối soát</button>
+        <button class="pill" data-filter="tc-zero-cod">⚠ TC nhưng COD = 0</button>
+        <button class="pill" data-filter="unknown-vtp">⚠ Đơn lạ (không có ở Pancake)</button>
       </div>
 
       <div class="card" style="padding: 0;">
@@ -1591,6 +1598,7 @@ const state = {
   returnsReceived: {},
   unknownCodes: [],
   partialCogs: {},
+  orphan1P1Buffer: [],  // Lưu các 1P1 mồ côi để match ở lần upload sau
   dateFrom: null,
   dateTo: null,
   orderFilter: 'all',
@@ -1657,6 +1665,10 @@ async function loadState() {
     const pc = localStorage.getItem('doi-soat-partial-cogs');
     if (pc) state.partialCogs = JSON.parse(pc);
   } catch(e) {}
+  try {
+    const ob = localStorage.getItem('doi-soat-orphan-1p1');
+    if (ob) state.orphan1P1Buffer = JSON.parse(ob);
+  } catch(e) {}
 
   // Chỉ tự tạo mẫu nếu app hoàn toàn mới (chưa từng dùng)
   // Sau khi user xóa data, không tự tạo lại
@@ -1685,6 +1697,7 @@ async function saveState() {
   try { localStorage.setItem('doi-soat-returns-received', JSON.stringify(state.returnsReceived)); } catch(e){}
   try { localStorage.setItem('doi-soat-unknown-codes', JSON.stringify(state.unknownCodes)); } catch(e){}
   try { localStorage.setItem('doi-soat-partial-cogs', JSON.stringify(state.partialCogs)); } catch(e){}
+  try { localStorage.setItem('doi-soat-orphan-1p1', JSON.stringify(state.orphan1P1Buffer)); } catch(e){}
 }
 
 // ============================================================================
@@ -1862,7 +1875,10 @@ function aggregateByDay() {
     d.orders++;
     if (o.sentToVtp) d.sentCount++;
     d.pancakeRevenue += o.pancakeRevenue;
-    d.actualRevenue += o.actualRevenue;
+    // Doanh thu thực tế: CHỈ tính từ đơn success/partial (không tính đơn hủy/hoàn/đang giao)
+    if (o.status === 'success' || o.status === 'partial') {
+      d.actualRevenue += o.actualRevenue;
+    }
     d.shipFee += o.shipFee;
     d.returnFee += o.returnFee || 0;
     if (o.status === 'success') {
@@ -1982,6 +1998,16 @@ function renderDashboard() {
   document.getElementById('kpi-orders-returned').textContent = totals.returnLikeCount.toLocaleString('vi-VN');
   document.getElementById('kpi-orders-cancelled').textContent = totals.cancelledCount.toLocaleString('vi-VN');
 
+  // KPI: Đơn TC nhưng COD = 0 (anomaly)
+  const anomalyCount = state.orders.filter(o => {
+    if (o.status !== 'success') return false;
+    if (state.dateFrom && o.date < state.dateFrom) return false;
+    if (state.dateTo && o.date > state.dateTo) return false;
+    return o.actualRevenue === 0;
+  }).length;
+  const anomalyEl = document.getElementById('kpi-orders-anomaly');
+  if (anomalyEl) anomalyEl.textContent = anomalyCount.toLocaleString('vi-VN');
+
   // Revenue chart
   const ctx1 = document.getElementById('chart-revenue');
   if (charts.revenue) charts.revenue.destroy();
@@ -2040,7 +2066,10 @@ function renderDashboard() {
   });
 
   if (rows.length > 0) {
-    document.getElementById('date-range-label').textContent = fmtDate(rows[0].date) + ' → ' + fmtDate(rows[rows.length-1].date);
+    const dateLabel = document.getElementById('date-range-label');
+    if (dateLabel) {
+      dateLabel.textContent = fmtDate(rows[0].date) + ' → ' + fmtDate(rows[rows.length-1].date);
+    }
   }
 }
 
@@ -2139,6 +2168,10 @@ function renderOrders() {
   if (state.orderFilter !== 'all') {
     if (state.orderFilter === 'mismatch') {
       orders = orders.filter(o => o.status === 'success' && o.actualRevenue !== o.pancakeRevenue);
+    } else if (state.orderFilter === 'tc-zero-cod') {
+      orders = orders.filter(o => o.status === 'success' && o.actualRevenue === 0);
+    } else if (state.orderFilter === 'unknown-vtp') {
+      orders = orders.filter(o => o.isUnknownVtp === true);
     } else {
       orders = orders.filter(o => o.status === state.orderFilter);
     }
@@ -2261,7 +2294,10 @@ function aggregateByMonth() {
     const m = months[month];
     m.orders++;
     m.pancakeRevenue += o.pancakeRevenue;
-    m.actualRevenue += o.actualRevenue;
+    // Doanh thu thực tế: CHỈ tính từ đơn success/partial
+    if (o.status === 'success' || o.status === 'partial') {
+      m.actualRevenue += o.actualRevenue;
+    }
     m.shipFee += o.shipFee;
     m.returnFee += o.returnFee || 0;
     if (o.status === 'success') {
@@ -2521,21 +2557,36 @@ function renderReturns() {
 
   // Phân loại theo status thô từ VTP (nếu có)
   const isVtpFullyReturned = (o) => {
-    // VTP báo "Đã trả" = đã hoàn thành quá trình hoàn về kho
+    // Đơn hoàn 100%: VTP báo "Đã trả" hoặc "Hoàn về kho"
     const raw = (o.vtpRawStatus || '').toLowerCase().trim();
-    return raw === 'đã trả' || raw.includes('hoàn về kho');
+    if (raw === 'đã trả' || raw.includes('hoàn về kho')) return true;
+    // Đơn partial: dựa vào status của đơn 1P1 đi kèm
+    if (o.status === 'partial') {
+      const partialRaw = (o.partialReturnStatus || '').toLowerCase().trim();
+      // 1P1 đã "Giao thành công" = đã giao về kho cho shop
+      if (partialRaw.includes('giao thành công') || partialRaw === 'đã trả') return true;
+    }
+    return false;
   };
 
   const isVtpReturning = (o) => {
     // Đang trên đường trả về (chưa hoàn thành)
-    const raw = (o.vtpRawStatus || '').toLowerCase().trim();
     if (isVtpFullyReturned(o)) return false;
-    // Đang chuyển hoàn / phát thất bại / giao 1 phần đang về
-    return raw.includes('chuyển hoàn')
-        || raw.includes('phát thất bại')
-        || raw.includes('không phát')
-        || o.status === 'partial'  // partial = có 1P1 đang/đã về
-        || o.status === 'failed';
+    const raw = (o.vtpRawStatus || '').toLowerCase().trim();
+    if (raw.includes('chuyển hoàn') ||
+        raw.includes('phát thất bại') ||
+        raw.includes('không phát')) return true;
+    // Đơn failed (KTC) chưa có status hoàn cụ thể
+    if (o.status === 'failed') return true;
+    // Đơn partial mà 1P1 chưa giao TC
+    if (o.status === 'partial') {
+      const partialRaw = (o.partialReturnStatus || '').toLowerCase().trim();
+      // 1P1 đang ở các trạng thái trung gian (chưa "Giao thành công")
+      if (partialRaw && !partialRaw.includes('giao thành công') && partialRaw !== 'đã trả') {
+        return true;
+      }
+    }
+    return false;
   };
 
   // KPI 1: Tổng đơn cần trả về
@@ -2650,6 +2701,28 @@ function renderUnknownCodes() {
   list.innerHTML = state.unknownCodes.map(code => `
     <code style="display: inline-block; padding: 4px 10px; background: var(--red-soft); color: var(--red); border-radius: 4px; font-family: 'Geist Mono', monospace; font-size: 12px;">${code}</code>
   `).join('');
+}
+
+// Helper: Bấm vào KPI ở Tổng quan để chuyển sang trang Chi tiết đơn hàng + lọc sẵn
+function goToOrdersFilter(filterName) {
+  // Set filter
+  state.orderFilter = filterName;
+
+  // Switch to orders page
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const navItem = document.querySelector('.nav-item[data-page="orders"]');
+  const page = document.getElementById('page-orders');
+  if (navItem) navItem.classList.add('active');
+  if (page) page.classList.add('active');
+
+  // Update active pill
+  document.querySelectorAll('#page-orders .pill').forEach(p => p.classList.remove('active'));
+  const targetPill = document.querySelector('#page-orders .pill[data-filter="' + filterName + '"]');
+  if (targetPill) targetPill.classList.add('active');
+
+  renderOrders();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function applyBulkReceived() {
@@ -3113,7 +3186,7 @@ function exportCSV() {
 
 async function resetAll() {
   if (!confirm('Xóa toàn bộ dữ liệu? Không thể hoàn tác.\n\n(App sẽ trống hoàn toàn, không tạo lại dữ liệu mẫu)')) return;
-  state.products = []; state.orders = []; state.ads = []; state.fixedCosts = []; state.codReceived = {}; state.returnsReceived = {}; state.unknownCodes = []; state.payouts = []; state.partialCogs = {};
+  state.products = []; state.orders = []; state.ads = []; state.fixedCosts = []; state.codReceived = {}; state.returnsReceived = {}; state.unknownCodes = []; state.payouts = []; state.partialCogs = {}; state.orphan1P1Buffer = [];
   try {
     localStorage.removeItem('doi-soat-products');
     localStorage.removeItem('doi-soat-orders');
@@ -3124,6 +3197,7 @@ async function resetAll() {
     localStorage.removeItem('doi-soat-returns-received');
     localStorage.removeItem('doi-soat-unknown-codes');
     localStorage.removeItem('doi-soat-partial-cogs');
+    localStorage.removeItem('doi-soat-orphan-1p1');
   } catch(e) {}
   renderAll();
   toast('Đã xóa toàn bộ dữ liệu. App đang trống — bấm "Tạo dữ liệu mẫu" nếu muốn xem demo, hoặc upload file VTP/Pancake.');
@@ -3474,6 +3548,9 @@ function applyVTPDataToOrders(vtpOrders) {
   const mainVtpOrders = vtpOrders.filter(v => !/1P1$/i.test(v.tracking));
   const returnVtpOrders = vtpOrders.filter(v => /1P1$/i.test(v.tracking));
 
+  // Gộp 1P1 từ file mới + 1P1 mồ côi từ lần upload trước (nếu có)
+  const allReturnShipments = [...returnVtpOrders, ...(state.orphan1P1Buffer || [])];
+
   // ===== BƯỚC 1: Upsert đơn chính =====
   mainVtpOrders.forEach(v => {
     const existingIdx = ordersByTracking[v.tracking];
@@ -3532,8 +3609,10 @@ function applyVTPDataToOrders(vtpOrders) {
     }
   });
 
-  // ===== BƯỚC 2: Xử lý đơn 1P1 =====
-  returnVtpOrders.forEach(rs => {
+  // ===== BƯỚC 2: Xử lý đơn 1P1 (gồm cả file mới + buffer mồ côi cũ) =====
+  const newOrphans = [];  // 1P1 vẫn không tìm được đơn gốc (giữ cho lần sau)
+
+  allReturnShipments.forEach(rs => {
     // Tìm đơn gốc: bỏ "1P1" cuối
     const originalTracking = rs.tracking.replace(/1P1$/i, '');
     let originalIdx = ordersByTracking[originalTracking];
@@ -3554,7 +3633,17 @@ function applyVTPDataToOrders(vtpOrders) {
       original.status = 'partial';
       original.partialDetectionReasons = ['has_return_shipment_1p1'];
       original.codFixedOnVtp = original.actualRevenue !== original.pancakeRevenue;
-      original.vtpReturnStatus = 'returning'; // có thể update khi 1P1 đã về kho
+      // Cập nhật vtpReturnStatus dựa vào status thật của đơn 1P1
+      const rsStatus = (rs.status || '').toLowerCase().trim();
+      if (rsStatus === 'đã trả' || rsStatus.includes('hoàn về kho') ||
+          rsStatus.includes('giao thành công')) {
+        // 1P1 status "Giao thành công" = đã giao về cho shop = đã hoàn xong
+        original.vtpReturnStatus = 'returned';
+      } else {
+        original.vtpReturnStatus = 'returning'; // còn đang trên đường
+      }
+      // Lưu status thô của đơn 1P1 đi kèm để hiển thị
+      original.partialReturnStatus = rs.status;
       stats.partialDetected++;
       stats.partialList.push({
         original: original.vtpTracking,
@@ -3564,8 +3653,13 @@ function applyVTPDataToOrders(vtpOrders) {
     } else {
       stats.orphanReturns++;
       stats.orphanList.push(rs.tracking);
+      // Lưu lại cho lần upload sau
+      newOrphans.push(rs);
     }
   });
+
+  // Cập nhật buffer: chỉ giữ 1P1 vẫn còn mồ côi (giới hạn 100 cái cuối, tránh phình to)
+  state.orphan1P1Buffer = newOrphans.slice(-100);
 
   return stats;
 }
