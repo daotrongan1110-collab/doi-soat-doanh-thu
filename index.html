@@ -658,6 +658,9 @@
       <div class="page-header">
         <div>
           <div class="page-title">Tổng quan đối soát</div>
+          <div class="page-subtitle" style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">
+            <span style="opacity: 0.7;">⏱</span> Cập nhật lần cuối: <span id="last-update-time" style="color: var(--text);">—</span>
+          </div>
         </div>
         <div class="page-actions">
           <div class="date-range">
@@ -1599,6 +1602,7 @@ const state = {
   unknownCodes: [],
   partialCogs: {},
   orphan1P1Buffer: [],  // Lưu các 1P1 mồ côi để match ở lần upload sau
+  lastUpdate: null,  // ISO string của lần cập nhật data gần nhất
   dateFrom: null,
   dateTo: null,
   orderFilter: 'all',
@@ -1669,6 +1673,10 @@ async function loadState() {
     const ob = localStorage.getItem('doi-soat-orphan-1p1');
     if (ob) state.orphan1P1Buffer = JSON.parse(ob);
   } catch(e) {}
+  try {
+    const lu = localStorage.getItem('doi-soat-last-update');
+    if (lu) state.lastUpdate = lu;
+  } catch(e) {}
 
   // Chỉ tự tạo mẫu nếu app hoàn toàn mới (chưa từng dùng)
   // Sau khi user xóa data, không tự tạo lại
@@ -1698,6 +1706,7 @@ async function saveState() {
   try { localStorage.setItem('doi-soat-unknown-codes', JSON.stringify(state.unknownCodes)); } catch(e){}
   try { localStorage.setItem('doi-soat-partial-cogs', JSON.stringify(state.partialCogs)); } catch(e){}
   try { localStorage.setItem('doi-soat-orphan-1p1', JSON.stringify(state.orphan1P1Buffer)); } catch(e){}
+  try { if (state.lastUpdate) localStorage.setItem('doi-soat-last-update', state.lastUpdate); } catch(e){}
 }
 
 // ============================================================================
@@ -1849,6 +1858,7 @@ function generateSampleData(silent) {
     i += batchSize;
   }
   state.payouts = payouts;
+  state.lastUpdate = new Date().toISOString();
 
   saveState();
   if (!silent) {
@@ -1943,6 +1953,30 @@ function filterByDate(rows) {
 let charts = {};
 
 function renderDashboard() {
+  // Render last update time
+  const luEl = document.getElementById('last-update-time');
+  if (luEl) {
+    if (state.lastUpdate) {
+      const d = new Date(state.lastUpdate);
+      const dateStr = d.toLocaleDateString('vi-VN');
+      const timeStr = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      // Tính khoảng thời gian
+      const now = new Date();
+      const diffMs = now - d;
+      const diffMin = Math.floor(diffMs / 60000);
+      const diffHour = Math.floor(diffMin / 60);
+      const diffDay = Math.floor(diffHour / 24);
+      let relative = '';
+      if (diffMin < 1) relative = ' (vừa xong)';
+      else if (diffMin < 60) relative = ` (${diffMin} phút trước)`;
+      else if (diffHour < 24) relative = ` (${diffHour} giờ trước)`;
+      else if (diffDay < 30) relative = ` (${diffDay} ngày trước)`;
+      luEl.innerHTML = `${dateStr} ${timeStr}<span style="color: var(--text-muted);">${relative}</span>`;
+    } else {
+      luEl.innerHTML = '<span style="color: var(--text-muted);">Chưa có dữ liệu — upload file VTP hoặc dùng dữ liệu mẫu</span>';
+    }
+  }
+
   const rows = filterByDate(aggregateByDay());
   const totals = rows.reduce((acc, r) => {
     acc.orders += r.orders;
@@ -3395,16 +3429,45 @@ function parseVTPExcelFile(file) {
   reader.onload = function(evt) {
     try {
       const data = new Uint8Array(evt.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
+      const workbook = XLSX.read(data, { type: 'array', cellStyles: false, cellFormula: false });
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
 
-      // Đọc TOÀN BỘ rows, không lọc blank ở SheetJS
-      // Dùng range đầy đủ và defval='' để cell trống trả về '' thay vì undefined
+      // BUG FIX: VTP file có dimension !ref bị sai (ví dụ chỉ ghi A1:AU23 dù thực tế có 197 dòng)
+      // → SheetJS chỉ đọc 23 dòng. Phải tự tính range thực từ tất cả cell keys.
+      let maxRow = 0, maxCol = 0;
+      Object.keys(sheet).forEach(key => {
+        if (key[0] === '!') return;
+        const match = key.match(/^([A-Z]+)(\d+)$/);
+        if (match) {
+          const row = parseInt(match[2]);
+          if (row > maxRow) maxRow = row;
+          let colNum = 0;
+          for (let i = 0; i < match[1].length; i++) {
+            colNum = colNum * 26 + (match[1].charCodeAt(i) - 64);
+          }
+          if (colNum > maxCol) maxCol = colNum;
+        }
+      });
+      // Convert maxCol number to letter
+      function colToLetter(n) {
+        let s = '';
+        while (n > 0) {
+          n--;
+          s = String.fromCharCode(65 + (n % 26)) + s;
+          n = Math.floor(n / 26);
+        }
+        return s;
+      }
+      const correctRange = 'A1:' + colToLetter(maxCol) + maxRow;
+      console.log('[VTP Parser] Original !ref:', sheet['!ref'], '→ Recomputed:', correctRange);
+      sheet['!ref'] = correctRange;
+
+      // Đọc TOÀN BỘ rows với range đã được sửa
       const rows = XLSX.utils.sheet_to_json(sheet, {
         header: 1,
         defval: '',
-        raw: true  // giữ nguyên giá trị (số là số, không bị auto-convert)
+        raw: true
       });
 
       console.log('[VTP Parser] Total rows in file:', rows.length);
@@ -3510,6 +3573,9 @@ function parseVTPExcelFile(file) {
       // Áp dụng vào state.orders
       const result = applyVTPDataToOrders(vtpOrders);
       showVTPResult('success', result);
+
+      // Cập nhật thời gian
+      state.lastUpdate = new Date().toISOString();
 
       saveState();
       renderAll();
