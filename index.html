@@ -658,8 +658,10 @@
       <div class="page-header">
         <div>
           <div class="page-title">Tổng quan đối soát</div>
-          <div class="page-subtitle" style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">
-            <span style="opacity: 0.7;">⏱</span> Cập nhật lần cuối: <span id="last-update-time" style="color: var(--text);">—</span>
+          <div class="page-subtitle" style="color: var(--text-muted); font-size: 12px; margin-top: 8px; line-height: 1.7;">
+            <div>📦 <strong style="color: var(--text);">Pancake:</strong> <span id="last-update-pancake">—</span></div>
+            <div>🚚 <strong style="color: var(--text);">Viettel Post:</strong> <span id="last-update-vtp">—</span></div>
+            <div>📢 <strong style="color: var(--text);">Facebook Ads:</strong> <span id="last-update-fbads">—</span></div>
           </div>
         </div>
         <div class="page-actions">
@@ -672,13 +674,6 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
             Làm mới
           </button>
-        </div>
-      </div>
-
-      <div class="banner">
-        <span class="banner-icon">ⓘ</span>
-        <div>
-          <strong>Đang xem dữ liệu mẫu.</strong> Vào mục "Nhập dữ liệu" để upload CSV từ Pancake và Viettel Post, hoặc bấm "Làm mới" để giả lập đồng bộ tự động. Tương lai có thể kết nối API để tự cập nhật.
         </div>
       </div>
 
@@ -1051,15 +1046,37 @@
           <div class="card-header">
             <div>
               <div class="card-title">Từ Pancake</div>
-              <div class="card-subtitle">File đơn hàng .csv xuất từ Pancake</div>
+              <div class="card-subtitle">Đồng bộ tự động từ Google Sheet (Pancake đẩy real-time)</div>
             </div>
           </div>
-          <div class="drop-zone" onclick="document.getElementById('file-pancake').click()">
-            <span class="drop-zone-icon">⬆</span>
-            <div class="drop-zone-title">Kéo file vào đây hoặc bấm để chọn</div>
-            <div class="drop-zone-hint">CSV · Excel · TXT</div>
+          <div class="field" style="margin-bottom: 12px;">
+            <label>Link CSV Google Sheet (export?format=csv&gid=...)</label>
+            <input type="text" id="pancake-sheet-url" placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv&gid=..." style="font-family: monospace; font-size: 11px;">
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+              Sheet phải set "Anyone with the link" — Viewer trong mục Share
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+              <input type="checkbox" id="pancake-auto-sync" onchange="togglePancakeAutoSync()">
+              <span>Tự đồng bộ mỗi</span>
+            </label>
+            <select id="pancake-auto-sync-interval" onchange="togglePancakeAutoSync()" style="padding: 4px 8px; font-size: 13px;">
+              <option value="2">2 phút</option>
+              <option value="5" selected>5 phút</option>
+              <option value="10">10 phút</option>
+              <option value="15">15 phút</option>
+              <option value="30">30 phút</option>
+              <option value="60">1 giờ</option>
+            </select>
+            <span id="pancake-next-sync" style="font-size: 12px; color: var(--text-muted);"></span>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="btn btn-primary" onclick="syncPancakeFromSheet()">🔄 Đồng bộ ngay</button>
+            <button class="btn" onclick="document.getElementById('file-pancake').click()">📁 Hoặc upload file CSV</button>
             <input type="file" id="file-pancake" accept=".csv,.xlsx,.txt" style="display: none;">
           </div>
+          <div id="pancake-sync-result" style="margin-top: 14px; display: none;"></div>
         </div>
 
         <div class="card">
@@ -1759,9 +1776,21 @@ const state = {
   unknownCodes: [],
   partialCogs: {},
   orphan1P1Buffer: [],  // Lưu các 1P1 mồ côi để match ở lần upload sau
-  lastUpdate: null,  // ISO string của lần cập nhật data gần nhất
+  lastUpdate: {
+    vtp: null,      // ISO string lần upload Excel VTP
+    pancake: null,  // ISO string lần sync Pancake
+    fbAds: null     // ISO string lần upload CSV FB Ads
+  },
+  lastUpdateSummary: {
+    vtp: '',        // Tóm tắt lần update VTP gần nhất (vd "188 đơn xử lý: 9 mới, 30 cập nhật")
+    pancake: '',    // Tóm tắt lần sync Pancake
+    fbAds: ''       // Tóm tắt lần upload FB Ads
+  },
   settings: {
     defaultReturnFee: 5000,  // Phí hoàn mặc định cho đơn KTC (VTP không ghi trong Excel)
+    pancakeSheetUrl: '',  // Link CSV Pancake auto-sync từ Google Sheet
+    pancakeAutoSync: true,  // Tự sync khi mở app + định kỳ
+    pancakeAutoSyncInterval: 5,  // Mỗi 5 phút
   },
   dateFrom: null,
   dateTo: null,
@@ -1835,7 +1864,25 @@ async function loadState() {
   } catch(e) {}
   try {
     const lu = localStorage.getItem('doi-soat-last-update');
-    if (lu) state.lastUpdate = lu;
+    if (lu) {
+      // Backward compat: cũ là string, mới là object
+      try {
+        const parsed = JSON.parse(lu);
+        if (typeof parsed === 'object' && parsed !== null) {
+          state.lastUpdate = Object.assign({vtp: null, pancake: null, fbAds: null}, parsed);
+        } else {
+          // String cũ → bỏ
+          state.lastUpdate = {vtp: null, pancake: null, fbAds: null};
+        }
+      } catch (e) {
+        // Không phải JSON → là string cũ → bỏ
+        state.lastUpdate = {vtp: null, pancake: null, fbAds: null};
+      }
+    }
+  } catch(e) {}
+  try {
+    const ls = localStorage.getItem('doi-soat-last-update-summary');
+    if (ls) state.lastUpdateSummary = Object.assign({vtp:'', pancake:'', fbAds:''}, JSON.parse(ls));
   } catch(e) {}
   try {
     const st = localStorage.getItem('doi-soat-settings');
@@ -1869,7 +1916,8 @@ async function saveState() {
   try { localStorage.setItem('doi-soat-unknown-codes', JSON.stringify(state.unknownCodes)); } catch(e){}
   try { localStorage.setItem('doi-soat-partial-cogs', JSON.stringify(state.partialCogs)); } catch(e){}
   try { localStorage.setItem('doi-soat-orphan-1p1', JSON.stringify(state.orphan1P1Buffer)); } catch(e){}
-  try { if (state.lastUpdate) localStorage.setItem('doi-soat-last-update', state.lastUpdate); } catch(e){}
+  try { if (state.lastUpdate) localStorage.setItem('doi-soat-last-update', JSON.stringify(state.lastUpdate)); } catch(e){}
+  try { if (state.lastUpdateSummary) localStorage.setItem('doi-soat-last-update-summary', JSON.stringify(state.lastUpdateSummary)); } catch(e){}
   try { localStorage.setItem('doi-soat-settings', JSON.stringify(state.settings)); } catch(e){}
 }
 
@@ -2023,7 +2071,6 @@ function generateSampleData(silent) {
     i += batchSize;
   }
   state.payouts = payouts;
-  state.lastUpdate = new Date().toISOString();
 
   saveState();
   if (!silent) {
@@ -2121,29 +2168,38 @@ function filterByDate(rows) {
 let charts = {};
 
 function renderDashboard() {
-  // Render last update time
-  const luEl = document.getElementById('last-update-time');
-  if (luEl) {
-    if (state.lastUpdate) {
-      const d = new Date(state.lastUpdate);
-      const dateStr = d.toLocaleDateString('vi-VN');
-      const timeStr = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-      // Tính khoảng thời gian
-      const now = new Date();
-      const diffMs = now - d;
-      const diffMin = Math.floor(diffMs / 60000);
-      const diffHour = Math.floor(diffMin / 60);
-      const diffDay = Math.floor(diffHour / 24);
-      let relative = '';
-      if (diffMin < 1) relative = ' (vừa xong)';
-      else if (diffMin < 60) relative = ` (${diffMin} phút trước)`;
-      else if (diffHour < 24) relative = ` (${diffHour} giờ trước)`;
-      else if (diffDay < 30) relative = ` (${diffDay} ngày trước)`;
-      luEl.innerHTML = `${dateStr} ${timeStr}<span style="color: var(--text-muted);">${relative}</span>`;
-    } else {
-      luEl.innerHTML = '<span style="color: var(--text-muted);">Chưa có dữ liệu — upload file VTP hoặc dùng dữ liệu mẫu</span>';
+  // Render last update time + summary cho 3 nguồn
+  const formatRelative = (isoStr) => {
+    if (!isoStr) return '<span style="color: var(--text-dim);">Chưa có dữ liệu</span>';
+    const d = new Date(isoStr);
+    const dateStr = d.toLocaleDateString('vi-VN');
+    const timeStr = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    const now = new Date();
+    const diffMin = Math.floor((now - d) / 60000);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+    let relative = '';
+    if (diffMin < 1) relative = ' (vừa xong)';
+    else if (diffMin < 60) relative = ` (${diffMin} phút trước)`;
+    else if (diffHour < 24) relative = ` (${diffHour} giờ trước)`;
+    else if (diffDay < 30) relative = ` (${diffDay} ngày trước)`;
+    else relative = ' (lâu rồi)';
+    return `<span style="color: var(--text);">${dateStr} ${timeStr}</span><span style="color: var(--text-dim);">${relative}</span>`;
+  };
+  const setUpdateInfo = (id, isoTime, summary) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    let html = formatRelative(isoTime);
+    if (isoTime && summary) {
+      html += ` <span style="color: var(--accent); margin-left: 8px;">— ${summary}</span>`;
     }
-  }
+    el.innerHTML = html;
+  };
+  const lu = state.lastUpdate || {};
+  const ls = state.lastUpdateSummary || {};
+  setUpdateInfo('last-update-pancake', lu.pancake, ls.pancake);
+  setUpdateInfo('last-update-vtp', lu.vtp, ls.vtp);
+  setUpdateInfo('last-update-fbads', lu.fbAds, ls.fbAds);
 
   const rows = filterByDate(aggregateByDay());
   const totals = rows.reduce((acc, r) => {
@@ -3705,6 +3761,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
     document.getElementById('page-' + item.dataset.page).classList.add('active');
     // Load settings UI nếu vào trang Cài đặt
     if (item.dataset.page === 'settings') loadSettingsToUI();
+    if (item.dataset.page === 'import') loadPancakeSheetUrl();
     // Đóng sidebar trên mobile sau khi chọn trang
     closeSidebar();
     // Cuộn lên đầu trang
@@ -3746,14 +3803,395 @@ document.getElementById('date-to').addEventListener('change', (e) => {
   renderDashboard(); renderDaily();
 });
 
-// File handler cho Pancake (chưa parse, sẽ làm khi có file mẫu)
+// ============================================================================
+// PANCAKE - SYNC TỪ GOOGLE SHEET / UPLOAD CSV
+// ============================================================================
+
+// Sync từ link CSV Google Sheet
+async function syncPancakeFromSheet(silent) {
+  const urlInput = document.getElementById('pancake-sheet-url');
+  let url = (urlInput && urlInput.value || '').trim();
+  if (!url) {
+    // Thử lấy từ settings nếu chưa nhập
+    url = (state.settings && state.settings.pancakeSheetUrl) || '';
+    if (url && urlInput) urlInput.value = url;
+  }
+  if (!url) {
+    if (!silent) showPancakeResult('error', 'Bạn chưa nhập link CSV. Lấy ở Sheet → Share → set public, rồi paste link export?format=csv&gid=...');
+    return;
+  }
+  if (!url.includes('docs.google.com') || !url.includes('export') || !url.includes('format=csv')) {
+    if (!silent) showPancakeResult('error', 'Link không đúng định dạng. Phải có dạng: https://docs.google.com/spreadsheets/d/.../export?format=csv&gid=...');
+    return;
+  }
+
+  // Lưu URL vào settings
+  state.settings.pancakeSheetUrl = url;
+  saveState();
+
+  if (!silent) showPancakeResult('info', '⏳ Đang tải dữ liệu từ Google Sheet...');
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('HTTP ' + response.status + ' - Sheet có thể chưa public hoặc link sai');
+    }
+    const csvText = await response.text();
+
+    // Kiểm tra response — nếu Google trả HTML (lỗi quyền) thay vì CSV
+    if (csvText.trim().startsWith('<') || csvText.includes('<HTML') || csvText.includes('<html')) {
+      throw new Error('Sheet chưa public. Vào Sheet → Share → đổi "Restricted" thành "Anyone with the link" - Viewer');
+    }
+
+    parsePancakeCSV(csvText, silent);
+
+    // Cập nhật thời gian sync cuối
+    lastAutoSyncTime = new Date().toISOString();
+    updateNextSyncDisplay();
+  } catch (err) {
+    if (!silent) {
+      showPancakeResult('error', 'Lỗi: ' + err.message);
+    } else {
+      console.warn('[AutoSync] Lỗi:', err.message);
+    }
+  }
+}
+
+// File upload Pancake (backup khi không có Sheet)
 const pancakeFileEl = document.getElementById('file-pancake');
 if (pancakeFileEl) {
   pancakeFileEl.addEventListener('change', (e) => {
-    if (e.target.files.length) {
-      toast('Đã nhận file Pancake: ' + e.target.files[0].name + ' (chưa parse — cần file mẫu)');
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      parsePancakeCSV(evt.target.result);
+    };
+    reader.readAsText(file, 'UTF-8');
+  });
+}
+
+// Parse CSV Pancake
+function parsePancakeCSV(csvText, silent) {
+  if (!csvText || csvText.trim().length < 10) {
+    if (!silent) showPancakeResult('error', 'File CSV trống hoặc lỗi');
+    return;
+  }
+
+  // Dùng PapaParse
+  const parsed = Papa.parse(csvText, {
+    header: true,
+    skipEmptyLines: true,
+    dynamicTyping: false  // giữ nguyên text, tự convert sau
+  });
+
+  if (parsed.errors && parsed.errors.length > 0) {
+    console.warn('[Pancake CSV] Parse errors:', parsed.errors.slice(0, 3));
+  }
+
+  const rows = parsed.data;
+  console.log('[Pancake CSV] Total rows:', rows.length);
+  console.log('[Pancake CSV] Headers:', parsed.meta.fields);
+
+  if (rows.length === 0) {
+    if (!silent) showPancakeResult('warn', 'File không có dữ liệu đơn nào');
+    return;
+  }
+
+  const result = applyPancakeData(rows);
+
+  if (!silent) {
+    showPancakeResult('success', result);
+  }
+
+  // Lưu thời gian + tóm tắt vào state (hiển thị cố định ở Tổng quan)
+  state.lastUpdate.pancake = new Date().toISOString();
+  const parts = [];
+  parts.push(`${result.total} đơn xử lý`);
+  if (result.inserted > 0) parts.push(`${result.inserted} mới`);
+  if (result.updated > 0) parts.push(`${result.updated} cập nhật`);
+  if (result.unchanged > 0) parts.push(`${result.unchanged} không đổi`);
+  state.lastUpdateSummary.pancake = parts.join(' · ');
+
+  saveState();
+  renderAll();
+}
+
+// Áp dụng data Pancake vào state.orders (upsert theo ID)
+function applyPancakeData(rows) {
+  const stats = {
+    total: rows.length,
+    inserted: 0,
+    updated: 0,
+    unchanged: 0,
+    skipped: 0,
+    skipList: []
+  };
+
+  // Helper: lấy giá trị từ row, thử nhiều tên cột
+  const getField = (row, ...names) => {
+    for (const n of names) {
+      if (row[n] !== undefined && row[n] !== '' && row[n] !== null) return row[n];
+    }
+    return '';
+  };
+  const getNumField = (row, ...names) => {
+    const v = getField(row, ...names);
+    if (!v) return 0;
+    return parseInt(String(v).replace(/[^\d-]/g, '')) || 0;
+  };
+
+  // Map status Pancake → app status
+  // Lưu ý: status chính (giao thành công, hoàn...) sẽ lấy từ VTP khi merge
+  // Pancake status chỉ dùng khi đơn CHƯA bắn VTP
+  const mapPancakeStatus = (s) => {
+    s = String(s || '').toLowerCase().trim();
+    if (s.includes('hủy') || s.includes('huỷ')) return 'cancelled';
+    if (s.includes('mới') || s.includes('moi') || s.includes('chờ')) return 'sent';  // Pancake "mới" = chờ xử lý
+    return 'sent';  // default cho đơn Pancake chưa có VTP info
+  };
+
+  // Index hiện tại theo id và theo vtpTracking
+  const ordersById = {};
+  const ordersByTracking = {};
+  state.orders.forEach((o, idx) => {
+    if (o.id) ordersById[o.id] = idx;
+    if (o.vtpTracking) ordersByTracking[o.vtpTracking] = idx;
+  });
+
+  rows.forEach(row => {
+    const pancakeId = getField(row, 'ID', 'Id', 'id');
+    const orderRef = getField(row, 'Mã đơn hàng đầy đủ', 'Mã đơn', 'Order Code');
+    const vtpTracking = String(getField(row, 'Mã vận đơn', 'Mã VĐ', 'Tracking')).trim();
+    const customer = getField(row, 'Khách hàng', 'Customer', 'Tên KH');
+    const phone = String(getField(row, 'Số điện thoại', 'SĐT', 'Phone')).trim();
+    const products = getField(row, 'Gồm các SP', 'Sản phẩm', 'Products');
+    const productDetail = getField(row, 'Sản phẩm chi tiết', 'Product Detail');
+    const productCode = getField(row, 'Mã sản phẩm', 'SKU', 'Product Code');
+    const qty = getNumField(row, 'Số lượng', 'Quantity', 'Qty');
+    const totalCost = getNumField(row, 'Tổng giá nhập SP', 'Tổng giá nhập', 'Total Cost');
+    const cod = getNumField(row, 'COD', 'Tiền thu hộ', 'Tổng tiền', 'Tổng đơn');
+    const dateField = String(getField(row, 'Ngày tạo đơn', 'Thời điểm tạo đơn', 'Created Date')).trim();
+    const statusField = getField(row, 'Trạng thái', 'Status');
+
+    // Bỏ qua dòng không có ID
+    if (!pancakeId) {
+      stats.skipped++;
+      return;
+    }
+
+    // Parse date Pancake (format: "18/04/2026" hoặc "18/04/2026 15:27")
+    let dateStr = '';
+    const dateMatch = String(dateField).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (dateMatch) {
+      dateStr = `${dateMatch[3]}-${dateMatch[2].padStart(2,'0')}-${dateMatch[1].padStart(2,'0')}`;
+    } else {
+      dateStr = new Date().toISOString().split('T')[0];
+    }
+
+    // Parse items
+    let items = [];
+    if (products || productDetail) {
+      const productName = productDetail || products || 'Không rõ';
+      items = [{
+        productId: productCode || 'unknown',
+        name: String(productName).substring(0, 100),  // limit length
+        qty: qty > 0 ? qty : 1,
+        unitPrice: cod > 0 && qty > 0 ? Math.floor(cod / qty) : cod,
+        unitCost: qty > 0 && totalCost > 0 ? Math.floor(totalCost / qty) : 0
+      }];
+    } else {
+      items = [{
+        productId: 'unknown', name: 'Không rõ', qty: 1, unitPrice: cod, unitCost: totalCost
+      }];
+    }
+
+    // Tìm đơn đã có (ưu tiên match theo ID Pancake)
+    const orderId = 'PC_' + pancakeId;  // prefix PC_ để phân biệt với data mẫu (PO_) và VTP_only (VTP_)
+    let existingIdx = ordersById[orderId];
+
+    // Fallback: match theo vtpTracking (nếu đơn này đã được VTP_only thêm trước)
+    if (existingIdx === undefined && vtpTracking) {
+      existingIdx = ordersByTracking[vtpTracking];
+    }
+
+    if (existingIdx !== undefined) {
+      // Đã có → cập nhật từ Pancake
+      const o = state.orders[existingIdx];
+      const before = JSON.stringify({
+        customer: o.customer, pancakeRevenue: o.pancakeRevenue, items: o.items
+      });
+
+      o.customer = customer || o.customer;
+      o.customerPhone = phone || o.customerPhone;
+      o.pancakeRevenue = cod;  // COD Pancake = giá trị đơn = pancakeRevenue
+      o.items = items;
+      o.pancakeOrderRef = orderRef;
+      // Cập nhật nguồn: nếu chỉ có VTP → giờ có cả Pancake
+      if (o.source === 'vtp_only') {
+        o.source = 'pancake+vtp';
+        delete o.isUnknownVtp;  // không còn lạ nữa
+      } else if (!o.source || o.source === 'pancake') {
+        o.source = vtpTracking ? 'pancake+vtp' : 'pancake';
+      }
+      // Status: nếu đã có status từ VTP (success/partial/returned/...) thì GIỮ NGUYÊN
+      // Chỉ cập nhật status nếu đơn chưa có VTP info
+      if (!o.vtpTracking || !vtpTracking) {
+        if (vtpTracking) o.vtpTracking = vtpTracking;
+      }
+      // Nếu Pancake báo cancelled → cập nhật (vì VTP có thể chưa update)
+      if (mapPancakeStatus(statusField) === 'cancelled' && o.status !== 'success' && o.status !== 'partial') {
+        o.status = 'cancelled';
+      }
+
+      const after = JSON.stringify({
+        customer: o.customer, pancakeRevenue: o.pancakeRevenue, items: o.items
+      });
+
+      if (before !== after) stats.updated++;
+      else stats.unchanged++;
+    } else {
+      // Chưa có → thêm mới
+      const newOrder = {
+        id: orderId,
+        date: dateStr,
+        customer: customer,
+        customerPhone: phone,
+        vtpTracking: vtpTracking,
+        items: items,
+        pancakeRevenue: cod,
+        pancakeOrderRef: orderRef,
+        status: vtpTracking ? 'sent' : mapPancakeStatus(statusField),
+        sentToVtp: !!vtpTracking,
+        actualRevenue: 0,  // chưa có VTP data → 0
+        shipFee: 0,
+        returnFee: 0,
+        codFixedOnVtp: false,
+        partialDetectionReasons: [],
+        vtpReturnStatus: null,
+        source: vtpTracking ? 'pancake+vtp' : 'pancake'
+      };
+      // Nếu Pancake báo hủy → status cancelled
+      if (mapPancakeStatus(statusField) === 'cancelled') {
+        newOrder.status = 'cancelled';
+      }
+      state.orders.push(newOrder);
+      ordersById[orderId] = state.orders.length - 1;
+      if (vtpTracking) ordersByTracking[vtpTracking] = state.orders.length - 1;
+      stats.inserted++;
     }
   });
+
+  return stats;
+}
+
+// Hiển thị kết quả sync Pancake
+function showPancakeResult(type, content) {
+  const el = document.getElementById('pancake-sync-result');
+  if (!el) return;
+
+  if (type === 'error') {
+    el.innerHTML = `
+      <div style="padding: 12px 14px; background: var(--red-soft); border-left: 3px solid var(--red); border-radius: 6px; color: var(--text); font-size: 13px;">
+        <strong style="color: var(--red);">❌ Lỗi:</strong> ${content}
+      </div>`;
+  } else if (type === 'warn') {
+    el.innerHTML = `
+      <div style="padding: 12px 14px; background: var(--accent-soft); border-left: 3px solid var(--accent); border-radius: 6px; font-size: 13px;">
+        <strong style="color: var(--accent);">⚠️</strong> ${content}
+      </div>`;
+  } else if (type === 'info') {
+    el.innerHTML = `
+      <div style="padding: 12px 14px; background: var(--surface-2); border-left: 3px solid var(--text-muted); border-radius: 6px; font-size: 13px;">
+        ${content}
+      </div>`;
+  } else if (type === 'success' && typeof content === 'object') {
+    const s = content;
+    el.innerHTML = `
+      <div style="padding: 14px; background: var(--green-soft); border-left: 3px solid var(--green); border-radius: 6px;">
+        <div style="font-weight: 500; color: var(--green); margin-bottom: 8px;">✅ Đã đồng bộ ${s.total} đơn từ Pancake</div>
+        <div style="font-size: 13px; line-height: 1.7;">
+          • <strong>${s.inserted}</strong> đơn mới thêm<br>
+          • <strong>${s.updated}</strong> đơn cập nhật<br>
+          • <strong>${s.unchanged}</strong> đơn không đổi<br>
+          ${s.skipped > 0 ? `• <strong style="color: var(--accent);">${s.skipped}</strong> dòng bỏ qua (thiếu ID)` : ''}
+        </div>
+      </div>`;
+  }
+  el.style.display = 'block';
+}
+
+// Load URL + cài đặt auto-sync khi mở trang
+function loadPancakeSheetUrl() {
+  const input = document.getElementById('pancake-sheet-url');
+  const checkbox = document.getElementById('pancake-auto-sync');
+  const intervalSelect = document.getElementById('pancake-auto-sync-interval');
+  if (input && state.settings && state.settings.pancakeSheetUrl) {
+    input.value = state.settings.pancakeSheetUrl;
+  }
+  if (checkbox) {
+    checkbox.checked = !!(state.settings && state.settings.pancakeAutoSync);
+  }
+  if (intervalSelect && state.settings && state.settings.pancakeAutoSyncInterval) {
+    intervalSelect.value = String(state.settings.pancakeAutoSyncInterval);
+  }
+  updateNextSyncDisplay();
+}
+
+// Toggle auto-sync on/off
+function togglePancakeAutoSync() {
+  const checkbox = document.getElementById('pancake-auto-sync');
+  const intervalSelect = document.getElementById('pancake-auto-sync-interval');
+  if (!checkbox || !intervalSelect) return;
+  state.settings.pancakeAutoSync = checkbox.checked;
+  state.settings.pancakeAutoSyncInterval = parseInt(intervalSelect.value) || 5;
+  saveState();
+  setupAutoSync();
+  updateNextSyncDisplay();
+  if (checkbox.checked) {
+    toast(`Đã bật tự đồng bộ Pancake mỗi ${state.settings.pancakeAutoSyncInterval} phút`);
+  } else {
+    toast('Đã tắt tự đồng bộ Pancake');
+  }
+}
+
+// Auto-sync logic: chạy ngầm theo interval
+let pancakeAutoSyncTimer = null;
+let lastAutoSyncTime = null;
+
+function setupAutoSync() {
+  // Clear timer cũ
+  if (pancakeAutoSyncTimer) {
+    clearInterval(pancakeAutoSyncTimer);
+    pancakeAutoSyncTimer = null;
+  }
+  // Bật timer mới nếu auto-sync ON và có URL
+  if (state.settings && state.settings.pancakeAutoSync && state.settings.pancakeSheetUrl) {
+    const intervalMs = (state.settings.pancakeAutoSyncInterval || 5) * 60 * 1000;
+    pancakeAutoSyncTimer = setInterval(() => {
+      console.log('[AutoSync] Đang đồng bộ Pancake định kỳ...');
+      syncPancakeFromSheet(true);  // silent mode
+    }, intervalMs);
+  }
+}
+
+// Hiển thị thời gian sync tiếp theo
+function updateNextSyncDisplay() {
+  const el = document.getElementById('pancake-next-sync');
+  if (!el) return;
+  if (state.settings && state.settings.pancakeAutoSync && state.settings.pancakeSheetUrl) {
+    const interval = state.settings.pancakeAutoSyncInterval || 5;
+    if (lastAutoSyncTime) {
+      const last = new Date(lastAutoSyncTime);
+      const next = new Date(last.getTime() + interval * 60 * 1000);
+      const timeStr = next.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      el.innerHTML = `<span style="color: var(--green);">●</span> Lần sync tiếp theo: ${timeStr}`;
+    } else {
+      el.innerHTML = `<span style="color: var(--green);">●</span> Đang chạy ngầm`;
+    }
+  } else {
+    el.innerHTML = '';
+  }
 }
 
 // VTP Excel parser — XỬ LÝ THẬT
@@ -3931,8 +4369,15 @@ function parseVTPExcelFile(file) {
       const result = applyVTPDataToOrders(vtpOrders);
       showVTPResult('success', result);
 
-      // Cập nhật thời gian
-      state.lastUpdate = new Date().toISOString();
+      // Cập nhật thời gian VTP + tóm tắt
+      state.lastUpdate.vtp = new Date().toISOString();
+      const partsVtp = [];
+      partsVtp.push(`${result.total} đơn xử lý`);
+      if (result.inserted > 0) partsVtp.push(`${result.inserted} mới`);
+      if (result.updated > 0) partsVtp.push(`${result.updated} cập nhật`);
+      if (result.partialDetected > 0) partsVtp.push(`${result.partialDetected} đơn 1P1`);
+      if (result.unknownOrders > 0) partsVtp.push(`${result.unknownOrders} đơn lạ`);
+      state.lastUpdateSummary.vtp = partsVtp.join(' · ');
 
       saveState();
       renderAll();
@@ -4239,6 +4684,8 @@ function parseFacebookAdsFile(file) {
       complete: function(results) {
         const imported = processFacebookRows(results.data);
         if (imported > 0) {
+          state.lastUpdate.fbAds = new Date().toISOString();
+          state.lastUpdateSummary.fbAds = `${imported} ngày chi phí`;
           saveState();
           renderAll();
           toast('Đã nhập ' + imported + ' ngày chi phí từ Facebook');
@@ -4309,6 +4756,17 @@ function processFacebookRows(rows) {
 (async function init() {
   await loadState();
   renderAll();
+
+  // Tự động đồng bộ Pancake nếu đã bật và có URL
+  if (state.settings && state.settings.pancakeAutoSync && state.settings.pancakeSheetUrl) {
+    // Sync ngay khi mở app (silent)
+    setTimeout(() => {
+      console.log('[AutoSync] Đang đồng bộ Pancake lần đầu khi mở app...');
+      syncPancakeFromSheet(true);
+    }, 2000);  // delay 2s để app render xong
+    // Bật timer định kỳ
+    setupAutoSync();
+  }
 })();
 </script>
 
