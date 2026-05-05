@@ -918,6 +918,11 @@
           <div class="page-subtitle">Bảng tổng hợp chi tiết — có thể xuất ra Excel</div>
         </div>
         <div class="page-actions">
+          <div class="date-range">
+            <input type="date" id="date-from-daily">
+            <span style="color: var(--text-dim);">—</span>
+            <input type="date" id="date-to-daily">
+          </div>
           <button class="btn" onclick="exportCSV()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Xuất CSV
@@ -974,6 +979,7 @@
       <div class="filter-bar">
         <button class="pill active" data-filter="all">Tất cả</button>
         <button class="pill" data-filter="sent">Đã bắn VTP</button>
+        <button class="pill" data-filter="not-sent">⚠ Chưa bắn VTP</button>
         <button class="pill" data-filter="shipping">Đang giao</button>
         <button class="pill" data-filter="success">Giao thành công</button>
         <button class="pill" data-filter="returned">Hoàn hàng</button>
@@ -982,7 +988,7 @@
         <button class="pill" data-filter="cancelled">Hủy</button>
         <button class="pill" data-filter="mismatch">⚠ Lệch đối soát</button>
         <button class="pill" data-filter="tc-zero-cod">⚠ TC nhưng COD = 0</button>
-        <button class="pill" data-filter="unknown-vtp">⚠ Đơn lạ (không có ở Pancake)</button>
+        <button class="pill" data-filter="unknown-vtp">⚠ Đơn lạ (chỉ ở VTP)</button>
       </div>
 
       <!-- Summary bar - hiển thị số đơn theo status -->
@@ -1005,8 +1011,9 @@
             <thead>
               <tr>
                 <th style="width: 48px;">STT</th>
-                <th>Mã đơn</th>
                 <th>Ngày tạo</th>
+                <th>Mã đơn Pancake</th>
+                <th>Mã VTP</th>
                 <th>Khách hàng</th>
                 <th>Sản phẩm</th>
                 <th class="num">SL</th>
@@ -1227,13 +1234,14 @@
             <thead>
               <tr>
                 <th rowspan="2" style="vertical-align: middle;">Tháng</th>
-                <th colspan="4" style="text-align: center; border-left: 1px solid var(--border); border-right: 1px solid var(--border); background: rgba(111,168,220,0.08);">Số lượng đơn</th>
+                <th colspan="5" style="text-align: center; border-left: 1px solid var(--border); border-right: 1px solid var(--border); background: rgba(111,168,220,0.08);">Số lượng đơn</th>
                 <th colspan="2" style="text-align: center; border-right: 1px solid var(--border); background: rgba(127,176,105,0.08);">Doanh thu</th>
                 <th colspan="5" style="text-align: center; border-right: 1px solid var(--border); background: rgba(215,100,100,0.08);">Chi phí</th>
                 <th colspan="3" style="text-align: center; background: rgba(232,184,74,0.08);">Hiệu quả</th>
               </tr>
               <tr>
-                <th class="num" style="border-left: 1px solid var(--border);">Tạo</th>
+                <th class="num" style="border-left: 1px solid var(--border);">Tạo (Pancake)</th>
+                <th class="num">Đã bắn VTP</th>
                 <th class="num">Thành công</th>
                 <th class="num">Hoàn/KTC</th>
                 <th class="num" style="border-right: 1px solid var(--border);">Hủy</th>
@@ -1261,6 +1269,13 @@
         <div>
           <div class="page-title">Báo cáo theo sản phẩm</div>
           <div class="page-subtitle">Sản phẩm nào bán chạy, sản phẩm nào lãi nhất, sản phẩm nào tỉ lệ hoàn cao</div>
+        </div>
+        <div class="page-actions">
+          <div class="date-range">
+            <input type="date" id="date-from-product">
+            <span style="color: var(--text-dim);">—</span>
+            <input type="date" id="date-to-product">
+          </div>
         </div>
       </div>
 
@@ -2533,7 +2548,17 @@ function renderOrders() {
     } else if (state.orderFilter === 'tc-zero-cod') {
       orders = orders.filter(o => o.status === 'success' && o.actualRevenue === 0);
     } else if (state.orderFilter === 'unknown-vtp') {
-      orders = orders.filter(o => o.isUnknownVtp === true);
+      // Đơn có ở VTP nhưng KHÔNG có ở Pancake (= source 'vtp_only')
+      orders = orders.filter(o => o.source === 'vtp_only');
+    } else if (state.orderFilter === 'sent') {
+      // Đã bắn sang VTP = đơn Pancake có vtpTracking
+      orders = orders.filter(o => o.vtpTracking && o.vtpTracking !== '' && (o.source === 'pancake+vtp' || o.source === 'pancake'));
+    } else if (state.orderFilter === 'not-sent') {
+      // Đơn Pancake CHƯA bắn VTP
+      orders = orders.filter(o => (o.source === 'pancake' || o.source === 'pancake+vtp' || !o.source) && (!o.vtpTracking || o.vtpTracking === ''));
+    } else if (state.orderFilter === 'pancake-only') {
+      // Đơn chỉ ở Pancake (chưa có VTP info)
+      orders = orders.filter(o => o.source === 'pancake' || (!o.source && (!o.vtpTracking || o.vtpTracking === '')));
     } else {
       orders = orders.filter(o => o.status === state.orderFilter);
     }
@@ -2596,7 +2621,7 @@ function renderOrders() {
   // Dòng tổng ở đầu bảng
   const totalRow = orders.length > 0 ? `
     <tr style="background: var(--surface-2); font-weight: 600; border-bottom: 2px solid var(--accent);">
-      <td colspan="5" style="padding: 14px 16px;"><strong>TỔNG (${orders.length} đơn)</strong></td>
+      <td colspan="6" style="padding: 14px 16px;"><strong>TỔNG (${orders.length} đơn)</strong></td>
       <td class="num">${totalQtySum.toLocaleString('vi-VN')}</td>
       <td class="num">${fmt(totalPancakeRev)}</td>
       <td>—</td>
@@ -2608,15 +2633,31 @@ function renderOrders() {
     </tr>
   ` : '';
 
-  tbody.innerHTML = totalRow + orderCalcs.slice(0, 200).map(({o, realCogs, profit, totalQty}, idx) => {
+  // Hiển thị tối đa 500 đơn để không lag
+  const DISPLAY_LIMIT = 500;
+  const isLimited = orders.length > DISPLAY_LIMIT;
+  const limitNote = isLimited
+    ? `<tr><td colspan="14" style="padding: 12px; text-align: center; color: var(--text-muted); background: var(--surface-2); font-size: 12px;">⚠️ Đang hiển thị ${DISPLAY_LIMIT}/${orders.length} đơn. Dùng filter để thu hẹp danh sách.</td></tr>`
+    : '';
+
+  tbody.innerHTML = totalRow + orderCalcs.slice(0, DISPLAY_LIMIT).map(({o, realCogs, profit, totalQty}, idx) => {
     const [label, cls] = statusLabels[o.status];
     const matched = o.status === 'success' && o.actualRevenue === o.pancakeRevenue;
     const productsText = o.items.map(it => `${it.name} ×${it.qty}`).join(', ');
+    // Mã Pancake: nếu source là vtp_only thì "—"
+    const pancakeCode = (o.source === 'vtp_only')
+      ? '<span style="color: var(--text-dim);">—</span>'
+      : `<strong>${o.pancakeOrderRef || o.id.replace(/^PC_/, '') || o.id}</strong>`;
+    // Mã VTP
+    const vtpCode = o.vtpTracking
+      ? `<span style="font-family: monospace; font-size: 12px;">${o.vtpTracking}</span>`
+      : '<span style="color: var(--text-dim);">Chưa bắn</span>';
     return `
       <tr>
         <td>${idx + 1}</td>
-        <td><strong>${o.id}</strong></td>
         <td>${fmtDate(o.date)}</td>
+        <td>${pancakeCode}</td>
+        <td>${vtpCode}</td>
         <td>${o.customer}</td>
         <td style="max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${productsText}">${productsText}</td>
         <td class="num">${totalQty}</td>
@@ -2629,7 +2670,7 @@ function renderOrders() {
         <td><span class="recon-status ${o.status === 'success' ? (matched ? 'match' : 'diff') : ''}">${o.status === 'success' ? (matched ? 'Khớp' : 'Lệch') : '—'}</span></td>
       </tr>
     `;
-  }).join('');
+  }).join('') + limitNote;
 }
 
 function renderProducts() {
@@ -2696,23 +2737,39 @@ function updateAds(date, field, value) {
 function aggregateByMonth() {
   const months = {};
   state.orders.forEach(o => {
+    // Áp date filter
+    if (state.dateFrom && o.date < state.dateFrom) return;
+    if (state.dateTo && o.date > state.dateTo) return;
+
     const month = o.date.slice(0, 7);
     if (!months[month]) {
       months[month] = {
-        month, orders: 0, successCount: 0, returnLikeCount: 0, cancelledCount: 0,
+        month, orders: 0, pancakeOrderCount: 0, sentCount: 0, successCount: 0, returnLikeCount: 0, cancelledCount: 0,
         pancakeRevenue: 0, actualRevenue: 0, cogs: 0, shipFee: 0, returnFee: 0
       };
     }
     const m = months[month];
     m.orders++;
-    m.pancakeRevenue += o.pancakeRevenue;
+
+    // Đếm đơn Pancake (có ở Pancake)
+    const isPancake = !o.source || o.source === 'pancake' || o.source === 'pancake+vtp';
+    if (isPancake) {
+      m.pancakeOrderCount++;
+      m.pancakeRevenue += o.pancakeRevenue || 0;
+    }
+
+    // Đếm đơn đã bắn VTP (có vtpTracking)
+    if (o.vtpTracking && o.vtpTracking !== '') {
+      m.sentCount++;
+    }
+
     // Doanh thu thực tế: CHỈ tính từ đơn success/partial
     if (o.status === 'success' || o.status === 'partial') {
-      m.actualRevenue += o.actualRevenue;
+      m.actualRevenue += o.actualRevenue || 0;
     }
     // Phí ship: KHÔNG tính cho đơn hủy
     if (o.status !== 'cancelled') {
-      m.shipFee += o.shipFee;
+      m.shipFee += o.shipFee || 0;
       m.returnFee += o.returnFee || 0;
     }
     if (o.status === 'success') {
@@ -2766,6 +2823,8 @@ function renderMonthly() {
 
   const t = rows.reduce((acc, r) => {
     acc.orders += r.orders;
+    acc.pancakeOrderCount += (r.pancakeOrderCount || 0);
+    acc.sentCount += (r.sentCount || 0);
     acc.successCount += r.successCount;
     acc.returnLikeCount += r.returnLikeCount;
     acc.cancelledCount += r.cancelledCount;
@@ -2778,14 +2837,15 @@ function renderMonthly() {
     acc.fixedCost += r.fixedCost;
     acc.profit += r.profit;
     return acc;
-  }, { orders:0, successCount:0, returnLikeCount:0, cancelledCount:0, pancakeRevenue:0, actualRevenue:0, adsCost:0, cogs:0, shipFee:0, returnFee:0, fixedCost:0, profit:0 });
+  }, { orders:0, pancakeOrderCount:0, sentCount:0, successCount:0, returnLikeCount:0, cancelledCount:0, pancakeRevenue:0, actualRevenue:0, adsCost:0, cogs:0, shipFee:0, returnFee:0, fixedCost:0, profit:0 });
   const tSuccessRate = t.orders > 0 ? (t.successCount / t.orders) * 100 : 0;
   const tMargin = t.actualRevenue > 0 ? (t.profit / t.actualRevenue) * 100 : 0;
 
   const totalRow = `
     <tr class="total-row">
       <td><strong>TỔNG ${rows.length} tháng</strong></td>
-      <td class="num" style="border-left: 1px solid var(--border);"><strong>${t.orders.toLocaleString('vi-VN')}</strong></td>
+      <td class="num" style="border-left: 1px solid var(--border);"><strong>${t.pancakeOrderCount.toLocaleString('vi-VN')}</strong></td>
+      <td class="num"><strong>${t.sentCount.toLocaleString('vi-VN')}</strong></td>
       <td class="num"><strong class="pos">${t.successCount.toLocaleString('vi-VN')}</strong></td>
       <td class="num"><strong class="neg">${t.returnLikeCount.toLocaleString('vi-VN')}</strong></td>
       <td class="num" style="border-right: 1px solid var(--border);"><strong>${t.cancelledCount.toLocaleString('vi-VN')}</strong></td>
@@ -2805,7 +2865,8 @@ function renderMonthly() {
   const body = rows.map(r => `
     <tr>
       <td><strong>${monthLabel(r.month)}</strong></td>
-      <td class="num" style="border-left: 1px solid var(--border);">${r.orders}</td>
+      <td class="num" style="border-left: 1px solid var(--border);">${r.pancakeOrderCount || 0}</td>
+      <td class="num">${r.sentCount || 0}</td>
       <td class="num"><span class="badge success">${r.successCount}</span></td>
       <td class="num"><span class="badge danger">${r.returnLikeCount}</span></td>
       <td class="num" style="border-right: 1px solid var(--border);"><span class="badge" style="background:var(--surface-2); color:var(--text-muted)">${r.cancelledCount}</span></td>
@@ -2857,8 +2918,10 @@ function aggregateByProduct() {
     };
   });
 
-  // Track orders per product
+  // Track orders per product (apply date filter)
   state.orders.forEach(o => {
+    if (state.dateFrom && o.date < state.dateFrom) return;
+    if (state.dateTo && o.date > state.dateTo) return;
     const productsInOrder = new Set();
     o.items.forEach(it => {
       if (!productStats[it.productId]) return;
@@ -3794,14 +3857,39 @@ document.querySelectorAll('.pill').forEach(p => {
   });
 });
 
-document.getElementById('date-from').addEventListener('change', (e) => {
-  state.dateFrom = e.target.value;
-  renderDashboard(); renderDaily();
-});
-document.getElementById('date-to').addEventListener('change', (e) => {
-  state.dateTo = e.target.value;
-  renderDashboard(); renderDaily();
-});
+// Date filter — sync trên cả 3 trang (Dashboard, Daily, By Product)
+function syncDateInputs(from, to) {
+  ['date-from', 'date-from-daily', 'date-from-product'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.value !== from) el.value = from || '';
+  });
+  ['date-to', 'date-to-daily', 'date-to-product'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.value !== to) el.value = to || '';
+  });
+}
+
+function bindDateInputs() {
+  ['date-from', 'date-from-daily', 'date-from-product'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('change', (e) => {
+      state.dateFrom = e.target.value;
+      syncDateInputs(state.dateFrom, state.dateTo);
+      renderAll();
+    });
+  });
+  ['date-to', 'date-to-daily', 'date-to-product'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('change', (e) => {
+      state.dateTo = e.target.value;
+      syncDateInputs(state.dateFrom, state.dateTo);
+      renderAll();
+    });
+  });
+}
+bindDateInputs();
 
 // ============================================================================
 // PANCAKE - SYNC TỪ GOOGLE SHEET / UPLOAD CSV
@@ -3925,8 +4013,14 @@ function applyPancakeData(rows) {
     updated: 0,
     unchanged: 0,
     skipped: 0,
+    sampleRemoved: 0,  // số đơn mẫu đã xóa
     skipList: []
   };
+
+  // Lần đầu sync Pancake → xóa data mẫu (id bắt đầu PO_) để tránh đếm trùng
+  const beforeCount = state.orders.length;
+  state.orders = state.orders.filter(o => !(o.id && o.id.startsWith('PO')));
+  stats.sampleRemoved = beforeCount - state.orders.length;
 
   // Helper: lấy giá trị từ row, thử nhiều tên cột
   const getField = (row, ...names) => {
@@ -4114,7 +4208,8 @@ function showPancakeResult(type, content) {
           • <strong>${s.inserted}</strong> đơn mới thêm<br>
           • <strong>${s.updated}</strong> đơn cập nhật<br>
           • <strong>${s.unchanged}</strong> đơn không đổi<br>
-          ${s.skipped > 0 ? `• <strong style="color: var(--accent);">${s.skipped}</strong> dòng bỏ qua (thiếu ID)` : ''}
+          ${s.skipped > 0 ? `• <strong style="color: var(--accent);">${s.skipped}</strong> dòng bỏ qua (thiếu ID)<br>` : ''}
+          ${s.sampleRemoved > 0 ? `• <strong style="color: var(--text-muted);">${s.sampleRemoved}</strong> đơn mẫu cũ đã được xóa tự động` : ''}
         </div>
       </div>`;
   }
