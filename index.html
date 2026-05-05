@@ -677,6 +677,19 @@
         </div>
       </div>
 
+      <!-- Quick date filter -->
+      <div class="quick-date-bar" style="display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;">
+        <span style="font-size: 12px; color: var(--text-muted); margin-right: 4px;">Lọc nhanh:</span>
+        <button class="pill" onclick="setQuickDate('today')">Hôm nay</button>
+        <button class="pill" onclick="setQuickDate('yesterday')">Hôm qua</button>
+        <button class="pill" onclick="setQuickDate('7days')">7 ngày qua</button>
+        <button class="pill" onclick="setQuickDate('30days')">30 ngày qua</button>
+        <button class="pill" onclick="setQuickDate('thisMonth')">Tháng này</button>
+        <button class="pill" onclick="setQuickDate('lastMonth')">Tháng trước</button>
+        <button class="pill" onclick="setQuickDate('thisYear')">Năm nay</button>
+        <button class="pill" onclick="setQuickDate('all')">Tất cả</button>
+      </div>
+
       <!-- KPIs - Tài chính -->
       <div class="kpi-section-label">Tài chính</div>
       <div class="kpi-grid">
@@ -930,6 +943,19 @@
         </div>
       </div>
 
+      <!-- Quick date filter -->
+      <div class="quick-date-bar" style="display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;">
+        <span style="font-size: 12px; color: var(--text-muted); margin-right: 4px;">Lọc nhanh:</span>
+        <button class="pill" onclick="setQuickDate('today')">Hôm nay</button>
+        <button class="pill" onclick="setQuickDate('yesterday')">Hôm qua</button>
+        <button class="pill" onclick="setQuickDate('7days')">7 ngày qua</button>
+        <button class="pill" onclick="setQuickDate('30days')">30 ngày qua</button>
+        <button class="pill" onclick="setQuickDate('thisMonth')">Tháng này</button>
+        <button class="pill" onclick="setQuickDate('lastMonth')">Tháng trước</button>
+        <button class="pill" onclick="setQuickDate('thisYear')">Năm nay</button>
+        <button class="pill" onclick="setQuickDate('all')">Tất cả</button>
+      </div>
+
       <div class="card" style="padding: 0;">
         <div class="table-wrap">
           <table id="daily-table">
@@ -978,6 +1004,7 @@
 
       <div class="filter-bar">
         <button class="pill active" data-filter="all">Tất cả</button>
+        <button class="pill" data-filter="from-pancake">Từ Pancake</button>
         <button class="pill" data-filter="sent">Đã bắn VTP</button>
         <button class="pill" data-filter="not-sent">⚠ Chưa bắn VTP</button>
         <button class="pill" data-filter="shipping">Đang giao</button>
@@ -1000,6 +1027,7 @@
             <span><span style="color: #E8B84A; font-weight: 600;" id="orders-summary-partial">0</span> <span style="color: var(--text-muted);">1 phần</span></span>
             <span><span style="color: var(--red); font-weight: 600;" id="orders-summary-returned">0</span> <span style="color: var(--text-muted);">hoàn</span></span>
             <span><span id="orders-summary-shipping" style="font-weight: 600;">0</span> <span style="color: var(--text-muted);">đang giao</span></span>
+            <span><span id="orders-summary-pending" style="font-weight: 600;">0</span> <span style="color: var(--text-muted);">chưa bắn</span></span>
             <span><span id="orders-summary-cancelled" style="font-weight: 600;">0</span> <span style="color: var(--text-muted);">hủy</span></span>
           </div>
         </div>
@@ -1015,6 +1043,7 @@
                 <th>Mã đơn Pancake</th>
                 <th>Mã VTP</th>
                 <th>Khách hàng</th>
+                <th>SĐT</th>
                 <th>Sản phẩm</th>
                 <th class="num">SL</th>
                 <th class="num">DT Pancake</th>
@@ -1029,6 +1058,7 @@
             <tbody id="orders-tbody"></tbody>
           </table>
         </div>
+        <div id="orders-pagination" style="border-top: 1px solid var(--border);"></div>
       </div>
     </div>
 
@@ -1277,6 +1307,19 @@
             <input type="date" id="date-to-product">
           </div>
         </div>
+      </div>
+
+      <!-- Quick date filter -->
+      <div class="quick-date-bar" style="display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;">
+        <span style="font-size: 12px; color: var(--text-muted); margin-right: 4px;">Lọc nhanh:</span>
+        <button class="pill" onclick="setQuickDate('today')">Hôm nay</button>
+        <button class="pill" onclick="setQuickDate('yesterday')">Hôm qua</button>
+        <button class="pill" onclick="setQuickDate('7days')">7 ngày qua</button>
+        <button class="pill" onclick="setQuickDate('30days')">30 ngày qua</button>
+        <button class="pill" onclick="setQuickDate('thisMonth')">Tháng này</button>
+        <button class="pill" onclick="setQuickDate('lastMonth')">Tháng trước</button>
+        <button class="pill" onclick="setQuickDate('thisYear')">Năm nay</button>
+        <button class="pill" onclick="setQuickDate('all')">Tất cả</button>
       </div>
 
       <div class="filter-bar">
@@ -1810,6 +1853,8 @@ const state = {
   dateFrom: null,
   dateTo: null,
   orderFilter: 'all',
+  orderPage: 1,
+  orderPageSize: 200,
   productSort: 'profit',
   codFilter: 'all',
   returnFilter: 'all',
@@ -2250,7 +2295,8 @@ function renderDashboard() {
   const pancakeOrders = state.orders.filter(isPancakeOrder);
   const pancakeOrderCount = pancakeOrders.length;
   const pancakeRevenueSum = pancakeOrders.reduce((s, o) => s + (o.pancakeRevenue || 0), 0);
-  const pancakeSentCount = pancakeOrders.filter(o => o.sentToVtp).length;
+  // Đã bắn VTP = đơn Pancake có vtpTracking (KHÔNG dùng flag sentToVtp vì Pancake parser không set)
+  const pancakeSentCount = pancakeOrders.filter(o => o.vtpTracking && o.vtpTracking !== '').length;
   const pancakeSuccessCount = pancakeOrders.filter(o => o.status === 'success').length;
   const pancakeReturnCount = pancakeOrders.filter(o => o.status === 'returned' || o.status === 'failed' || o.status === 'partial').length;
   const pancakeCancelCount = pancakeOrders.filter(o => o.status === 'cancelled').length;
@@ -2542,6 +2588,14 @@ function renderDaily() {
 
 function renderOrders() {
   let orders = state.orders.slice().sort((a,b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+
+  // Áp date filter cho mọi trường hợp
+  orders = orders.filter(o => {
+    if (state.dateFrom && o.date < state.dateFrom) return false;
+    if (state.dateTo && o.date > state.dateTo) return false;
+    return true;
+  });
+
   if (state.orderFilter !== 'all') {
     if (state.orderFilter === 'mismatch') {
       orders = orders.filter(o => o.status === 'success' && o.actualRevenue !== o.pancakeRevenue);
@@ -2550,15 +2604,15 @@ function renderOrders() {
     } else if (state.orderFilter === 'unknown-vtp') {
       // Đơn có ở VTP nhưng KHÔNG có ở Pancake (= source 'vtp_only')
       orders = orders.filter(o => o.source === 'vtp_only');
+    } else if (state.orderFilter === 'from-pancake') {
+      // Tất cả đơn từ Pancake (không tính vtp_only)
+      orders = orders.filter(o => !o.source || o.source === 'pancake' || o.source === 'pancake+vtp');
     } else if (state.orderFilter === 'sent') {
       // Đã bắn sang VTP = đơn Pancake có vtpTracking
       orders = orders.filter(o => o.vtpTracking && o.vtpTracking !== '' && (o.source === 'pancake+vtp' || o.source === 'pancake'));
     } else if (state.orderFilter === 'not-sent') {
       // Đơn Pancake CHƯA bắn VTP
-      orders = orders.filter(o => (o.source === 'pancake' || o.source === 'pancake+vtp' || !o.source) && (!o.vtpTracking || o.vtpTracking === ''));
-    } else if (state.orderFilter === 'pancake-only') {
-      // Đơn chỉ ở Pancake (chưa có VTP info)
-      orders = orders.filter(o => o.source === 'pancake' || (!o.source && (!o.vtpTracking || o.vtpTracking === '')));
+      orders = orders.filter(o => (o.source === 'pancake' || !o.source) && (!o.vtpTracking || o.vtpTracking === ''));
     } else {
       orders = orders.filter(o => o.status === state.orderFilter);
     }
@@ -2571,6 +2625,7 @@ function renderOrders() {
     partial: orders.filter(o => o.status === 'partial').length,
     returned: orders.filter(o => o.status === 'returned' || o.status === 'failed').length,
     shipping: orders.filter(o => o.status === 'shipping' || o.status === 'sent').length,
+    pending: orders.filter(o => o.status === 'pending').length,
     cancelled: orders.filter(o => o.status === 'cancelled').length
   };
   const setSummary = (id, val) => {
@@ -2582,6 +2637,7 @@ function renderOrders() {
   setSummary('orders-summary-partial', summaryCounts.partial);
   setSummary('orders-summary-returned', summaryCounts.returned);
   setSummary('orders-summary-shipping', summaryCounts.shipping);
+  setSummary('orders-summary-pending', summaryCounts.pending);
   setSummary('orders-summary-cancelled', summaryCounts.cancelled);
 
   const statusLabels = {
@@ -2591,7 +2647,8 @@ function renderOrders() {
     cancelled: ['Đã hủy', ''],
     partial: ['Giao 1 phần', 'warn'],
     shipping: ['Đang giao', 'info'],
-    sent: ['Đã bắn VTP', 'info']
+    sent: ['Đã bắn VTP', 'info'],
+    pending: ['Chưa bắn VTP', '']
   };
 
   // Tính tổng cho dòng total row
@@ -2621,7 +2678,7 @@ function renderOrders() {
   // Dòng tổng ở đầu bảng
   const totalRow = orders.length > 0 ? `
     <tr style="background: var(--surface-2); font-weight: 600; border-bottom: 2px solid var(--accent);">
-      <td colspan="6" style="padding: 14px 16px;"><strong>TỔNG (${orders.length} đơn)</strong></td>
+      <td colspan="7" style="padding: 14px 16px;"><strong>TỔNG (${orders.length} đơn)</strong></td>
       <td class="num">${totalQtySum.toLocaleString('vi-VN')}</td>
       <td class="num">${fmt(totalPancakeRev)}</td>
       <td>—</td>
@@ -2633,14 +2690,18 @@ function renderOrders() {
     </tr>
   ` : '';
 
-  // Hiển thị tối đa 500 đơn để không lag
-  const DISPLAY_LIMIT = 500;
-  const isLimited = orders.length > DISPLAY_LIMIT;
-  const limitNote = isLimited
-    ? `<tr><td colspan="14" style="padding: 12px; text-align: center; color: var(--text-muted); background: var(--surface-2); font-size: 12px;">⚠️ Đang hiển thị ${DISPLAY_LIMIT}/${orders.length} đơn. Dùng filter để thu hẹp danh sách.</td></tr>`
-    : '';
+  // Pagination
+  const pageSize = state.orderPageSize || 200;
+  const totalPages = Math.max(1, Math.ceil(orders.length / pageSize));
+  // Clamp current page
+  if (state.orderPage > totalPages) state.orderPage = totalPages;
+  if (state.orderPage < 1) state.orderPage = 1;
+  const startIdx = (state.orderPage - 1) * pageSize;
+  const endIdx = Math.min(startIdx + pageSize, orders.length);
+  const pagedOrders = orderCalcs.slice(startIdx, endIdx);
 
-  tbody.innerHTML = totalRow + orderCalcs.slice(0, DISPLAY_LIMIT).map(({o, realCogs, profit, totalQty}, idx) => {
+  tbody.innerHTML = totalRow + pagedOrders.map(({o, realCogs, profit, totalQty}, i) => {
+    const idx = startIdx + i;
     const [label, cls] = statusLabels[o.status];
     const matched = o.status === 'success' && o.actualRevenue === o.pancakeRevenue;
     const productsText = o.items.map(it => `${it.name} ×${it.qty}`).join(', ');
@@ -2659,6 +2720,7 @@ function renderOrders() {
         <td>${pancakeCode}</td>
         <td>${vtpCode}</td>
         <td>${o.customer}</td>
+        <td><span style="font-family: monospace; font-size: 12px; color: var(--text-muted);">${o.customerPhone || '—'}</span></td>
         <td style="max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${productsText}">${productsText}</td>
         <td class="num">${totalQty}</td>
         <td class="num">${fmt(o.pancakeRevenue)}</td>
@@ -2670,7 +2732,60 @@ function renderOrders() {
         <td><span class="recon-status ${o.status === 'success' ? (matched ? 'match' : 'diff') : ''}">${o.status === 'success' ? (matched ? 'Khớp' : 'Lệch') : '—'}</span></td>
       </tr>
     `;
-  }).join('') + limitNote;
+  }).join('');
+
+  // Render pagination
+  renderOrdersPagination(orders.length, totalPages);
+}
+
+function renderOrdersPagination(totalOrders, totalPages) {
+  const el = document.getElementById('orders-pagination');
+  if (!el) return;
+  if (totalOrders <= state.orderPageSize) {
+    el.innerHTML = '';
+    return;
+  }
+  const cur = state.orderPage;
+  const startIdx = (cur - 1) * state.orderPageSize + 1;
+  const endIdx = Math.min(cur * state.orderPageSize, totalOrders);
+
+  // Tạo dãy số trang: hiện 5 trang gần đây nhất + ... + first/last
+  const pageNumbers = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+  } else {
+    pageNumbers.push(1);
+    if (cur > 3) pageNumbers.push('...');
+    for (let i = Math.max(2, cur - 1); i <= Math.min(totalPages - 1, cur + 1); i++) {
+      pageNumbers.push(i);
+    }
+    if (cur < totalPages - 2) pageNumbers.push('...');
+    pageNumbers.push(totalPages);
+  }
+
+  el.innerHTML = `
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; flex-wrap: wrap; gap: 12px;">
+      <div style="font-size: 13px; color: var(--text-muted);">
+        Hiển thị <strong style="color: var(--text);">${startIdx}-${endIdx}</strong> / <strong style="color: var(--text);">${totalOrders}</strong> đơn
+      </div>
+      <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+        <button class="btn" style="padding: 6px 10px; font-size: 12px;" onclick="goToOrdersPage(${cur - 1})" ${cur <= 1 ? 'disabled' : ''}>‹ Trước</button>
+        ${pageNumbers.map(n => {
+          if (n === '...') return '<span style="padding: 6px 4px; color: var(--text-dim);">...</span>';
+          return `<button class="btn ${n === cur ? 'btn-primary' : ''}" style="padding: 6px 10px; font-size: 12px; min-width: 36px;" onclick="goToOrdersPage(${n})">${n}</button>`;
+        }).join('')}
+        <button class="btn" style="padding: 6px 10px; font-size: 12px;" onclick="goToOrdersPage(${cur + 1})" ${cur >= totalPages ? 'disabled' : ''}>Sau ›</button>
+      </div>
+    </div>
+  `;
+}
+
+function goToOrdersPage(page) {
+  state.orderPage = page;
+  renderOrders();
+  // Cuộn lên đầu bảng
+  const table = document.getElementById('orders-table');
+  if (table) table.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function renderProducts() {
@@ -3840,6 +3955,7 @@ document.querySelectorAll('.pill').forEach(p => {
     p.classList.add('active');
     if (p.dataset.filter !== undefined) {
       state.orderFilter = p.dataset.filter;
+      state.orderPage = 1;  // Reset trang về 1 khi đổi filter
       renderOrders();
     } else if (p.dataset.sort !== undefined) {
       state.productSort = p.dataset.sort;
@@ -3867,6 +3983,45 @@ function syncDateInputs(from, to) {
     const el = document.getElementById(id);
     if (el && el.value !== to) el.value = to || '';
   });
+}
+
+// Quick date filter — set ngày theo preset
+function setQuickDate(preset) {
+  const now = new Date();
+  const fmt = (d) => d.toISOString().split('T')[0];
+  let from = null, to = null;
+
+  if (preset === 'today') {
+    from = to = fmt(now);
+  } else if (preset === 'yesterday') {
+    const y = new Date(now); y.setDate(y.getDate() - 1);
+    from = to = fmt(y);
+  } else if (preset === '7days') {
+    const start = new Date(now); start.setDate(start.getDate() - 6);
+    from = fmt(start); to = fmt(now);
+  } else if (preset === '30days') {
+    const start = new Date(now); start.setDate(start.getDate() - 29);
+    from = fmt(start); to = fmt(now);
+  } else if (preset === 'thisMonth') {
+    from = fmt(new Date(now.getFullYear(), now.getMonth(), 1));
+    to = fmt(now);
+  } else if (preset === 'lastMonth') {
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+    from = fmt(lastMonthStart); to = fmt(lastMonthEnd);
+  } else if (preset === 'thisYear') {
+    from = fmt(new Date(now.getFullYear(), 0, 1));
+    to = fmt(now);
+  } else if (preset === 'all') {
+    from = null; to = null;
+  }
+
+  state.dateFrom = from;
+  state.dateTo = to;
+  syncDateInputs(from, to);
+  // Reset trang về 1 khi đổi date
+  state.orderPage = 1;
+  renderAll();
 }
 
 function bindDateInputs() {
@@ -4041,8 +4196,7 @@ function applyPancakeData(rows) {
   const mapPancakeStatus = (s) => {
     s = String(s || '').toLowerCase().trim();
     if (s.includes('hủy') || s.includes('huỷ')) return 'cancelled';
-    if (s.includes('mới') || s.includes('moi') || s.includes('chờ')) return 'sent';  // Pancake "mới" = chờ xử lý
-    return 'sent';  // default cho đơn Pancake chưa có VTP info
+    return 'pending';  // mặc định: đơn Pancake chưa có VTP info → chờ xử lý
   };
 
   // Index hiện tại theo id và theo vtpTracking
