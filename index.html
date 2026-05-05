@@ -746,14 +746,19 @@
           <div class="kpi-sub">Chưa có kết quả giao</div>
         </div>
         <div class="kpi-card green">
-          <div class="kpi-label">Giao thành công</div>
+          <div class="kpi-label">Giao TC thực tế</div>
           <div class="kpi-value" id="kpi-orders-success">—</div>
-          <div class="kpi-sub">Tỉ lệ: <span id="kpi-success-rate">—</span></div>
+          <div class="kpi-sub">Không gồm đơn 1 phần</div>
+        </div>
+        <div class="kpi-card warn">
+          <div class="kpi-label">Giao 1 phần</div>
+          <div class="kpi-value" id="kpi-orders-partial">—</div>
+          <div class="kpi-sub">Đơn TC nhưng có 1P1</div>
         </div>
         <div class="kpi-card red">
-          <div class="kpi-label">Hoàn / không TC</div>
+          <div class="kpi-label">Hoàn (KTC)</div>
           <div class="kpi-value" id="kpi-orders-returned">—</div>
-          <div class="kpi-sub">Gồm hoàn, giao 1 phần, thất bại</div>
+          <div class="kpi-sub">Hoàn + giao thất bại</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Đơn hủy</div>
@@ -768,7 +773,7 @@
       </div>
 
       <!-- Charts -->
-      <div class="chart-grid">
+      <div style="margin-bottom: 20px;">
         <div class="card">
           <div class="card-header">
             <div>
@@ -778,26 +783,129 @@
           </div>
           <div class="chart-wrap"><canvas id="chart-revenue"></canvas></div>
         </div>
+      </div>
 
-        <div class="card">
-          <div class="card-header">
-            <div>
-              <div class="card-title">Trạng thái đơn hàng</div>
-              <div class="card-subtitle">Tỉ lệ theo trạng thái vận chuyển</div>
-            </div>
-          </div>
-          <div class="chart-wrap"><canvas id="chart-status"></canvas></div>
+      <!-- TỈ LỆ GIAO HÀNG -->
+      <div class="kpi-section-label">Tỉ lệ giao hàng</div>
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="card-subtitle" style="margin-bottom: 14px; line-height: 1.6;">
+          Tổng đơn gửi VTP đã có kết quả = <strong style="color: var(--text);" id="rate-total-vtp">0</strong> đơn
+          <span style="color: var(--text-dim);">(không tính đơn hủy + đang giao)</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Loại</th>
+                <th class="num">Số đơn</th>
+                <th class="num">Tỉ lệ</th>
+                <th>Ghi chú</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="cursor: pointer;" onclick="goToOrdersFilter('success')">
+                <td><span class="badge success">Giao TC thực tế</span></td>
+                <td class="num"><strong id="rate-success-count">0</strong></td>
+                <td class="num"><strong style="color: var(--green);" id="rate-success-pct">—</strong></td>
+                <td style="color: var(--text-muted);">Đơn giao thành công, không bao gồm 1 phần</td>
+              </tr>
+              <tr style="cursor: pointer;" onclick="goToOrdersFilter('partial')">
+                <td><span class="badge warn">Giao 1 phần</span></td>
+                <td class="num"><strong id="rate-partial-count">0</strong></td>
+                <td class="num"><strong style="color: #E8B84A;" id="rate-partial-pct">—</strong></td>
+                <td style="color: var(--text-muted);">Đơn giao 1 phần (có 1P1)</td>
+              </tr>
+              <tr style="cursor: pointer;" onclick="goToOrdersFilter('returned')">
+                <td><span class="badge danger">Hoàn (KTC)</span></td>
+                <td class="num"><strong id="rate-returned-count">0</strong></td>
+                <td class="num"><strong style="color: var(--red);" id="rate-returned-pct">—</strong></td>
+                <td style="color: var(--text-muted);">Hoàn về kho do khách không nhận</td>
+              </tr>
+              <tr style="background: var(--surface-2); font-weight: 600;">
+                <td><strong>Tỉ lệ giao TC</strong></td>
+                <td class="num"><strong id="rate-success-count2">0</strong></td>
+                <td class="num"><strong style="color: var(--green); font-size: 18px;" id="rate-success-big">—</strong></td>
+                <td style="color: var(--text-muted);">TC / Tổng VTP đã có kết quả</td>
+              </tr>
+              <tr style="background: var(--surface-2); font-weight: 600;">
+                <td><strong>Tỉ lệ hoàn</strong></td>
+                <td class="num"><strong id="rate-return-count2">0</strong></td>
+                <td class="num"><strong style="color: var(--red); font-size: 18px;" id="rate-return-big">—</strong></td>
+                <td style="color: var(--text-muted);">(1 phần + hoàn) / Tổng VTP đã có kết quả</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-header">
-          <div>
-            <div class="card-title">Lợi nhuận & chi phí</div>
-            <div class="card-subtitle">Phân bổ chi phí và lợi nhuận ròng theo ngày</div>
-          </div>
+      <!-- BẢNG CHI PHÍ -->
+      <div class="kpi-section-label">Chi phí</div>
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="card-subtitle" style="margin-bottom: 14px;">
+          Tổng hợp các loại chi phí trong khoảng thời gian. Bấm vào tên chi phí để xem chi tiết.
         </div>
-        <div class="chart-wrap" style="height: 320px;"><canvas id="chart-profit"></canvas></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Loại chi phí</th>
+                <th class="num">Số tiền</th>
+                <th class="num">% Doanh thu</th>
+                <th>Ghi chú</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="cursor: pointer;" onclick="goToOrdersFilter('success')">
+                <td>🚚 Phí ship đơn TC</td>
+                <td class="num" id="cost-ship-success">—</td>
+                <td class="num" id="cost-ship-success-pct">—</td>
+                <td style="color: var(--text-muted);">Phí gửi đơn giao thành công</td>
+              </tr>
+              <tr style="cursor: pointer;" onclick="goToOrdersFilter('partial')">
+                <td>🔄 Phí ship đơn 1 phần</td>
+                <td class="num" id="cost-ship-partial">—</td>
+                <td class="num" id="cost-ship-partial-pct">—</td>
+                <td style="color: var(--text-muted);">Phí gửi đơn giao 1 phần</td>
+              </tr>
+              <tr style="cursor: pointer;" onclick="goToOrdersFilter('returned')">
+                <td>↩️ Phí ship đơn hoàn</td>
+                <td class="num" id="cost-ship-returned">—</td>
+                <td class="num" id="cost-ship-returned-pct">—</td>
+                <td style="color: var(--text-muted);">Phí gửi đơn bị hoàn</td>
+              </tr>
+              <tr style="cursor: pointer;" onclick="goToOrdersFilter('returned')">
+                <td>📦 Phí hoàn về kho</td>
+                <td class="num" id="cost-return-fee">—</td>
+                <td class="num" id="cost-return-fee-pct">—</td>
+                <td style="color: var(--text-muted);">Phí VTP thu khi hoàn</td>
+              </tr>
+              <tr style="cursor: pointer;" onclick="goToPage('ads')">
+                <td>📢 Quảng cáo (FB Ads)</td>
+                <td class="num" id="cost-ads">—</td>
+                <td class="num" id="cost-ads-pct">—</td>
+                <td style="color: var(--text-muted);">Chi phí marketing</td>
+              </tr>
+              <tr style="cursor: pointer;" onclick="goToPage('products')">
+                <td>📦 Giá vốn (COGS)</td>
+                <td class="num" id="cost-cogs">—</td>
+                <td class="num" id="cost-cogs-pct">—</td>
+                <td style="color: var(--text-muted);">Giá nhập của hàng đã giao</td>
+              </tr>
+              <tr style="cursor: pointer;" onclick="goToPage('fixed-costs')">
+                <td>🏠 Chi phí cố định</td>
+                <td class="num" id="cost-fixed">—</td>
+                <td class="num" id="cost-fixed-pct">—</td>
+                <td style="color: var(--text-muted);">Kho, lương, điện nước...</td>
+              </tr>
+              <tr style="background: var(--surface-2); font-weight: 600; border-top: 2px solid var(--accent);">
+                <td><strong>TỔNG CHI PHÍ</strong></td>
+                <td class="num"><strong id="cost-total-bottom" style="font-size: 16px;">—</strong></td>
+                <td class="num"><strong id="cost-total-pct" style="font-size: 16px;">—</strong></td>
+                <td style="color: var(--text-muted);">Trên doanh thu thực tế</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -876,15 +984,31 @@
         <button class="pill" data-filter="unknown-vtp">⚠ Đơn lạ (không có ở Pancake)</button>
       </div>
 
+      <!-- Summary bar - hiển thị số đơn theo status -->
+      <div class="card" id="orders-summary-bar" style="margin-bottom: 12px; padding: 12px 16px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 16px 24px; font-size: 13px;">
+          <div><strong style="color: var(--accent); font-size: 16px;" id="orders-summary-total">0</strong> <span style="color: var(--text-muted);">đơn (đang lọc)</span></div>
+          <div style="border-left: 1px solid var(--border); padding-left: 24px; display: flex; flex-wrap: wrap; gap: 12px;">
+            <span><span style="color: var(--green); font-weight: 600;" id="orders-summary-success">0</span> <span style="color: var(--text-muted);">TC</span></span>
+            <span><span style="color: #E8B84A; font-weight: 600;" id="orders-summary-partial">0</span> <span style="color: var(--text-muted);">1 phần</span></span>
+            <span><span style="color: var(--red); font-weight: 600;" id="orders-summary-returned">0</span> <span style="color: var(--text-muted);">hoàn</span></span>
+            <span><span id="orders-summary-shipping" style="font-weight: 600;">0</span> <span style="color: var(--text-muted);">đang giao</span></span>
+            <span><span id="orders-summary-cancelled" style="font-weight: 600;">0</span> <span style="color: var(--text-muted);">hủy</span></span>
+          </div>
+        </div>
+      </div>
+
       <div class="card" style="padding: 0;">
         <div class="table-wrap">
           <table id="orders-table">
             <thead>
               <tr>
+                <th style="width: 48px;">STT</th>
                 <th>Mã đơn</th>
                 <th>Ngày tạo</th>
                 <th>Khách hàng</th>
                 <th>Sản phẩm</th>
+                <th class="num">SL</th>
                 <th class="num">DT Pancake</th>
                 <th>Trạng thái VTP</th>
                 <th class="num">DT thực tế</th>
@@ -1383,7 +1507,7 @@
       <div class="banner">
         <span class="banner-icon">ⓘ</span>
         <div>
-          Viettel Post gom tiền COD của nhiều đơn vào các <strong>phiên chuyển tiền</strong> (thường 1-3 ngày/phiên) rồi chuyển khoản 1 lần. Danh sách phiên sẽ tự đồng bộ từ API VTP khi kết nối. Mỗi phiên có ngày, tổng tiền và danh sách các đơn kèm theo.
+          Viettel Post gom tiền COD của nhiều đơn vào các <strong>phiên chuyển tiền</strong> (thường 1-3 ngày/phiên) rồi chuyển khoản 1 lần. Bạn cần <strong>nhập tay</strong> các phiên chuyển tiền từ sao kê ngân hàng để theo dõi (tương lai có thể tự đồng bộ qua webhook VTP). Mỗi phiên có ngày, tổng tiền và mã phiên.
         </div>
       </div>
 
@@ -1894,8 +2018,11 @@ function aggregateByDay() {
     if (o.status === 'success' || o.status === 'partial') {
       d.actualRevenue += o.actualRevenue;
     }
-    d.shipFee += o.shipFee;
-    d.returnFee += o.returnFee || 0;
+    // Phí ship: KHÔNG tính cho đơn hủy (shop hủy lấy / VTP hủy lấy = chưa giao đi)
+    if (o.status !== 'cancelled') {
+      d.shipFee += o.shipFee;
+      d.returnFee += o.returnFee || 0;
+    }
     if (o.status === 'success') {
       d.successCount++;
       d.cogs += o.items.reduce((s,it) => s + it.unitCost * it.qty, 0);
@@ -2055,18 +2182,59 @@ function renderDashboard() {
     elGross.className = 'kpi-value ' + (grossProfit >= 0 ? 'pos' : 'neg');
   }
 
-  // Order count KPIs — phân biệt theo nguồn
+  // ====== ORDER COUNT KPIs — logic chuẩn theo nghiệp vụ VTP ======
+  // Đơn Pancake: là cái shop tạo
+  // Đã bắn VTP: đơn Pancake có vtpTracking
+  // Đơn gửi VTP (success/partial/returned/failed) → chia theo status thật
+  //
+  // Đếm theo phạm vi date filter:
+  const inDate = (o) => {
+    if (state.dateFrom && o.date < state.dateFrom) return false;
+    if (state.dateTo && o.date > state.dateTo) return false;
+    return true;
+  };
+  // Tất cả đơn (Pancake + VTP_only) trong khoảng ngày
+  const allFilteredOrders = state.orders.filter(inDate);
+  // Đếm theo status app (đã đánh dấu partial nếu có 1P1)
+  const cntSuccess = allFilteredOrders.filter(o => o.status === 'success').length;
+  const cntPartial = allFilteredOrders.filter(o => o.status === 'partial').length;
+  const cntReturned = allFilteredOrders.filter(o => o.status === 'returned' || o.status === 'failed').length;
+  const cntCancelled = allFilteredOrders.filter(o => o.status === 'cancelled').length;
+  const cntShipping = allFilteredOrders.filter(o => o.status === 'shipping' || o.status === 'sent').length;
+
+  // Tổng đơn gửi VTP = đã có kết quả giao (TC thực tế + 1 phần + hoàn)
+  const totalVtpDelivered = cntSuccess + cntPartial + cntReturned;
+
+  // Tỉ lệ giao TC = TC thực tế / tổng đơn VTP đã có kết quả
+  const successRateVtp = totalVtpDelivered > 0 ? (cntSuccess / totalVtpDelivered) * 100 : 0;
+  // Tỉ lệ hoàn = (1 phần + hoàn) / tổng đơn VTP đã có kết quả
+  const returnRateVtp = totalVtpDelivered > 0 ? ((cntPartial + cntReturned) / totalVtpDelivered) * 100 : 0;
+
+  const hasOrders = allFilteredOrders.length > 0;
+  const hasDelivered = totalVtpDelivered > 0;
+
   // Tổng đơn Pancake: chỉ đếm đơn có ở Pancake
   document.getElementById('kpi-orders-total').textContent = fmtNumOrEmpty(pancakeOrderCount, hasPancake);
-  // Đã bắn VTP: dùng số đơn pancake đã bắn
+  // Đã bắn VTP: đơn Pancake có vtpTracking
   document.getElementById('kpi-orders-sent').textContent = fmtNumOrEmpty(pancakeSentCount, hasPancake);
   document.getElementById('kpi-sent-rate').textContent = fmtPctOrEmpty(pancakeSentRate, hasPancake);
-  // Còn các status: dùng số toàn bộ (cả pancake và vtp_only)
-  document.getElementById('kpi-orders-shipping').textContent = totals.shippingCount.toLocaleString('vi-VN');
-  document.getElementById('kpi-orders-success').textContent = totals.successCount.toLocaleString('vi-VN');
-  // Success rate: trên tổng đơn pancake (vì Pancake là nguồn)
-  document.getElementById('kpi-success-rate').textContent = fmtPctOrEmpty(pancakeSuccessRate, hasPancake);
-  document.getElementById('kpi-orders-returned').textContent = totals.returnLikeCount.toLocaleString('vi-VN');
+  // Đang giao
+  document.getElementById('kpi-orders-shipping').textContent = fmtNumOrEmpty(cntShipping, hasOrders);
+  // Giao TC thực tế (KHÔNG bao gồm partial)
+  document.getElementById('kpi-orders-success').textContent = fmtNumOrEmpty(cntSuccess, hasOrders);
+  // Giao 1 phần (KPI riêng)
+  const partialEl = document.getElementById('kpi-orders-partial');
+  if (partialEl) partialEl.textContent = fmtNumOrEmpty(cntPartial, hasOrders);
+  // Hoàn (KTC) — chỉ tính returned + failed (KHÔNG tính partial vì đã có KPI riêng)
+  document.getElementById('kpi-orders-returned').textContent = fmtNumOrEmpty(cntReturned, hasOrders);
+  // Đơn hủy
+  document.getElementById('kpi-orders-cancelled').textContent = fmtNumOrEmpty(cntCancelled, hasOrders);
+  // Tỉ lệ TC big
+  const successBigEl = document.getElementById('kpi-success-rate-big');
+  if (successBigEl) successBigEl.textContent = fmtPctOrEmpty(successRateVtp, hasDelivered);
+  // Tỉ lệ hoàn big
+  const returnBigEl = document.getElementById('kpi-return-rate-big');
+  if (returnBigEl) returnBigEl.textContent = fmtPctOrEmpty(returnRateVtp, hasDelivered);
   document.getElementById('kpi-orders-cancelled').textContent = totals.cancelledCount.toLocaleString('vi-VN');
 
   // KPI: Đơn TC nhưng COD = 0 (anomaly)
@@ -2094,47 +2262,70 @@ function renderDashboard() {
     options: chartOpts()
   });
 
-  // Status doughnut
-  const ctx2 = document.getElementById('chart-status');
-  if (charts.status) charts.status.destroy();
-  const statusCounts = { success:0, returned:0, cancelled:0, partial:0, shipping:0, sent:0, failed:0 };
-  state.orders.forEach(o => {
-    if (state.dateFrom && o.date < state.dateFrom) return;
-    if (state.dateTo && o.date > state.dateTo) return;
-    statusCounts[o.status] = (statusCounts[o.status] || 0) + 1;
-  });
-  charts.status = new Chart(ctx2, {
-    type: 'doughnut',
-    data: {
-      labels: ['Thành công', 'Hoàn', 'Giao không TC', 'Hủy', 'Giao 1 phần', 'Đang giao', 'Đã bắn VTP'],
-      datasets: [{
-        data: [statusCounts.success, statusCounts.returned, statusCounts.failed, statusCounts.cancelled, statusCounts.partial, statusCounts.shipping, statusCounts.sent],
-        backgroundColor: ['#7FB069', '#D76464', '#A0504A', '#6D665C', '#E8B84A', '#6FA8DC', '#8E7CC3'],
-        borderColor: 'var(--surface)',
-        borderWidth: 2
-      }]
-    },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#A39B8E', font: { family: 'Geist', size: 12 }, padding: 10 } } }, cutout: '60%' }
-  });
+  // ===== BẢNG TỈ LỆ GIAO HÀNG =====
+  const setText2 = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  setText2('rate-total-vtp', totalVtpDelivered.toLocaleString('vi-VN'));
+  setText2('rate-success-count', cntSuccess.toLocaleString('vi-VN'));
+  setText2('rate-success-count2', cntSuccess.toLocaleString('vi-VN'));
+  setText2('rate-partial-count', cntPartial.toLocaleString('vi-VN'));
+  setText2('rate-returned-count', cntReturned.toLocaleString('vi-VN'));
+  setText2('rate-return-count2', (cntPartial + cntReturned).toLocaleString('vi-VN'));
+  if (totalVtpDelivered > 0) {
+    setText2('rate-success-pct', ((cntSuccess / totalVtpDelivered) * 100).toFixed(1) + '%');
+    setText2('rate-partial-pct', ((cntPartial / totalVtpDelivered) * 100).toFixed(1) + '%');
+    setText2('rate-returned-pct', ((cntReturned / totalVtpDelivered) * 100).toFixed(1) + '%');
+    setText2('rate-success-big', successRateVtp.toFixed(1) + '%');
+    setText2('rate-return-big', returnRateVtp.toFixed(1) + '%');
+  } else {
+    setText2('rate-success-pct', '—');
+    setText2('rate-partial-pct', '—');
+    setText2('rate-returned-pct', '—');
+    setText2('rate-success-big', '—');
+    setText2('rate-return-big', '—');
+  }
 
-  // Profit chart
-  const ctx3 = document.getElementById('chart-profit');
-  if (charts.profit) charts.profit.destroy();
-  charts.profit = new Chart(ctx3, {
-    type: 'bar',
-    data: {
-      labels: rows.map(r => fmtDate(r.date)),
-      datasets: [
-        { label: 'Chi phí ads', data: rows.map(r => r.adsCost), backgroundColor: '#E8B84A', stack: 'cost' },
-        { label: 'Giá vốn', data: rows.map(r => r.cogs), backgroundColor: '#D76464', stack: 'cost' },
-        { label: 'Phí ship', data: rows.map(r => r.shipFee), backgroundColor: '#6FA8DC', stack: 'cost' },
-        { label: 'Phí hoàn', data: rows.map(r => r.returnFee), backgroundColor: '#A0504A', stack: 'cost' },
-        { label: 'CP cố định', data: rows.map(r => r.fixedCost), backgroundColor: '#8E7CC3', stack: 'cost' },
-        { label: 'Lợi nhuận', data: rows.map(r => r.profit), backgroundColor: '#7FB069', stack: 'profit', type: 'bar' }
-      ]
-    },
-    options: { ...chartOpts(), scales: { ...chartOpts().scales, x: { ...chartOpts().scales.x, stacked: true }, y: { ...chartOpts().scales.y, stacked: false } } }
+  // ===== BẢNG CHI PHÍ =====
+  // Tách phí ship theo loại đơn
+  let shipCostSuccess = 0, shipCostPartial = 0, shipCostReturned = 0, returnFeeSum = 0, cogsSum = 0;
+  allFilteredOrders.forEach(o => {
+    if (o.status === 'cancelled') return; // đơn hủy không tính chi phí
+    if (o.status === 'success') {
+      shipCostSuccess += o.shipFee || 0;
+      cogsSum += o.items.reduce((s, it) => s + it.unitCost * it.qty, 0);
+    } else if (o.status === 'partial') {
+      shipCostPartial += o.shipFee || 0;
+      const partialCogs = state.partialCogs[o.id];
+      const fullCogs = o.items.reduce((s, it) => s + it.unitCost * it.qty, 0);
+      cogsSum += (partialCogs !== undefined && partialCogs !== null && partialCogs !== '')
+        ? Number(partialCogs)
+        : Math.round(fullCogs * 0.5);
+    } else if (o.status === 'returned' || o.status === 'failed') {
+      shipCostReturned += o.shipFee || 0;
+      returnFeeSum += o.returnFee || 0;
+    }
   });
+  const adsCost = totals.adsCost;
+  const fixedCostSum = totals.fixedCost;
+  const totalCostSum = shipCostSuccess + shipCostPartial + shipCostReturned + returnFeeSum + adsCost + cogsSum + fixedCostSum;
+  const actualRev = totals.actualRevenue;
+  const pctOf = (val) => actualRev > 0 ? ((val / actualRev) * 100).toFixed(1) + '%' : '—';
+  const fmtOr = (val) => val > 0 ? fmt(val) : '—';
+  setText2('cost-ship-success', fmtOr(shipCostSuccess));
+  setText2('cost-ship-success-pct', pctOf(shipCostSuccess));
+  setText2('cost-ship-partial', fmtOr(shipCostPartial));
+  setText2('cost-ship-partial-pct', pctOf(shipCostPartial));
+  setText2('cost-ship-returned', fmtOr(shipCostReturned));
+  setText2('cost-ship-returned-pct', pctOf(shipCostReturned));
+  setText2('cost-return-fee', fmtOr(returnFeeSum));
+  setText2('cost-return-fee-pct', pctOf(returnFeeSum));
+  setText2('cost-ads', fmtOr(adsCost));
+  setText2('cost-ads-pct', pctOf(adsCost));
+  setText2('cost-cogs', fmtOr(cogsSum));
+  setText2('cost-cogs-pct', pctOf(cogsSum));
+  setText2('cost-fixed', fmtOr(fixedCostSum));
+  setText2('cost-fixed-pct', pctOf(fixedCostSum));
+  setText2('cost-total-bottom', fmtOr(totalCostSum));
+  setText2('cost-total-pct', pctOf(totalCostSum));
 
   if (rows.length > 0) {
     const dateLabel = document.getElementById('date-range-label');
@@ -2248,6 +2439,26 @@ function renderOrders() {
     }
   }
 
+  // Summary counts (theo orders đã filter)
+  const summaryCounts = {
+    total: orders.length,
+    success: orders.filter(o => o.status === 'success').length,
+    partial: orders.filter(o => o.status === 'partial').length,
+    returned: orders.filter(o => o.status === 'returned' || o.status === 'failed').length,
+    shipping: orders.filter(o => o.status === 'shipping' || o.status === 'sent').length,
+    cancelled: orders.filter(o => o.status === 'cancelled').length
+  };
+  const setSummary = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val.toLocaleString('vi-VN');
+  };
+  setSummary('orders-summary-total', summaryCounts.total);
+  setSummary('orders-summary-success', summaryCounts.success);
+  setSummary('orders-summary-partial', summaryCounts.partial);
+  setSummary('orders-summary-returned', summaryCounts.returned);
+  setSummary('orders-summary-shipping', summaryCounts.shipping);
+  setSummary('orders-summary-cancelled', summaryCounts.cancelled);
+
   const statusLabels = {
     success: ['Giao thành công', 'success'],
     returned: ['Hoàn hàng', 'danger'],
@@ -2258,8 +2469,9 @@ function renderOrders() {
     sent: ['Đã bắn VTP', 'info']
   };
 
-  const tbody = document.getElementById('orders-tbody');
-  tbody.innerHTML = orders.slice(0, 200).map(o => {
+  // Tính tổng cho dòng total row
+  let totalQtySum = 0, totalPancakeRev = 0, totalActualRev = 0, totalCogs = 0, totalShipFee = 0, totalProfit = 0;
+  const orderCalcs = orders.map(o => {
     const cogs = o.items.reduce((s,it) => s + it.unitCost * it.qty, 0);
     const partialCogsOverride = state.partialCogs[o.id];
     const realCogs = o.status === 'success'
@@ -2270,15 +2482,44 @@ function renderOrders() {
               : Math.round(cogs * 0.5))
           : 0);
     const profit = o.actualRevenue - realCogs - o.shipFee - (o.returnFee || 0);
+    const totalQty = o.items.reduce((s, it) => s + (it.qty || 0), 0);
+    totalQtySum += totalQty;
+    totalPancakeRev += o.pancakeRevenue || 0;
+    totalActualRev += o.actualRevenue || 0;
+    totalCogs += realCogs;
+    totalShipFee += o.shipFee || 0;
+    if (o.status !== 'cancelled') totalProfit += profit;
+    return { o, realCogs, profit, totalQty };
+  });
+
+  const tbody = document.getElementById('orders-tbody');
+  // Dòng tổng ở đầu bảng
+  const totalRow = orders.length > 0 ? `
+    <tr style="background: var(--surface-2); font-weight: 600; border-bottom: 2px solid var(--accent);">
+      <td colspan="5" style="padding: 14px 16px;"><strong>TỔNG (${orders.length} đơn)</strong></td>
+      <td class="num">${totalQtySum.toLocaleString('vi-VN')}</td>
+      <td class="num">${fmt(totalPancakeRev)}</td>
+      <td>—</td>
+      <td class="num">${fmt(totalActualRev)}</td>
+      <td class="num">${fmt(totalCogs)}</td>
+      <td class="num">${fmt(totalShipFee)}</td>
+      <td class="num ${totalProfit >= 0 ? 'pos' : 'neg'}">${fmt(totalProfit)}</td>
+      <td>—</td>
+    </tr>
+  ` : '';
+
+  tbody.innerHTML = totalRow + orderCalcs.slice(0, 200).map(({o, realCogs, profit, totalQty}, idx) => {
     const [label, cls] = statusLabels[o.status];
     const matched = o.status === 'success' && o.actualRevenue === o.pancakeRevenue;
     const productsText = o.items.map(it => `${it.name} ×${it.qty}`).join(', ');
     return `
       <tr>
+        <td>${idx + 1}</td>
         <td><strong>${o.id}</strong></td>
         <td>${fmtDate(o.date)}</td>
         <td>${o.customer}</td>
-        <td style="max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${productsText}">${productsText}</td>
+        <td style="max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${productsText}">${productsText}</td>
+        <td class="num">${totalQty}</td>
         <td class="num">${fmt(o.pancakeRevenue)}</td>
         <td><span class="badge ${cls}">${label}</span></td>
         <td class="num">${o.actualRevenue > 0 ? fmt(o.actualRevenue) : '—'}</td>
@@ -2369,8 +2610,11 @@ function aggregateByMonth() {
     if (o.status === 'success' || o.status === 'partial') {
       m.actualRevenue += o.actualRevenue;
     }
-    m.shipFee += o.shipFee;
-    m.returnFee += o.returnFee || 0;
+    // Phí ship: KHÔNG tính cho đơn hủy
+    if (o.status !== 'cancelled') {
+      m.shipFee += o.shipFee;
+      m.returnFee += o.returnFee || 0;
+    }
     if (o.status === 'success') {
       m.successCount++;
       m.cogs += o.items.reduce((s,it) => s + it.unitCost * it.qty, 0);
@@ -2793,6 +3037,17 @@ function goToOrdersFilter(filterName) {
   if (targetPill) targetPill.classList.add('active');
 
   renderOrders();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Helper: Chuyển trang đơn giản (không filter)
+function goToPage(pageName) {
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const navItem = document.querySelector('.nav-item[data-page="' + pageName + '"]');
+  const page = document.getElementById('page-' + pageName);
+  if (navItem) navItem.classList.add('active');
+  if (page) page.classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
