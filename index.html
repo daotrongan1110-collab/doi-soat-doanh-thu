@@ -873,11 +873,17 @@
                 <td class="num" id="cost-ship-returned-pct">—</td>
                 <td style="color: var(--text-muted);">Phí gửi đơn bị hoàn</td>
               </tr>
-              <tr style="cursor: pointer;" onclick="goToOrdersFilter('returned')">
-                <td>📦 Phí hoàn về kho</td>
+              <tr style="cursor: pointer;" onclick="goToOrdersFilter('partial')">
+                <td>📦 Phí ship hoàn 1 phần (1P1)</td>
                 <td class="num" id="cost-return-fee">—</td>
                 <td class="num" id="cost-return-fee-pct">—</td>
-                <td style="color: var(--text-muted);">Phí VTP thu khi hoàn</td>
+                <td style="color: var(--text-muted);">Phí VTP gửi phần hàng còn lại về kho</td>
+              </tr>
+              <tr style="cursor: pointer;" onclick="goToOrdersFilter('returned')">
+                <td>📦 Phí hoàn đơn KTC <span style="color: var(--text-dim); font-size: 11px;">(ước tính)</span></td>
+                <td class="num" id="cost-ktc-return-fee">—</td>
+                <td class="num" id="cost-ktc-return-fee-pct">—</td>
+                <td style="color: var(--text-muted);">VTP không ghi trong Excel — tính = số đơn × phí mặc định (Cài đặt)</td>
               </tr>
               <tr style="cursor: pointer;" onclick="goToPage('ads')">
                 <td>📢 Quảng cáo (FB Ads)</td>
@@ -1634,6 +1640,28 @@
       <div class="card">
         <div class="card-header">
           <div>
+            <div class="card-title">Phí vận chuyển</div>
+            <div class="card-subtitle">Cài đặt phí Viettel Post không có trong file Excel</div>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Phí hoàn mỗi đơn KTC (đ)</label>
+            <input type="number" id="setting-default-return-fee" placeholder="5000" min="0" step="500">
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; line-height: 1.5;">
+              VTP không ghi phí hoàn riêng trong file Excel cho đơn giao không thành công. App sẽ tính theo công thức: <strong>số đơn KTC × phí này</strong>.
+              Mặc định: 5,000đ.
+            </div>
+          </div>
+        </div>
+        <div style="margin-top: 12px;">
+          <button class="btn btn-primary" onclick="saveSettings()">💾 Lưu cài đặt</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
             <div class="card-title">Đơn vị & hiển thị</div>
           </div>
         </div>
@@ -1732,6 +1760,9 @@ const state = {
   partialCogs: {},
   orphan1P1Buffer: [],  // Lưu các 1P1 mồ côi để match ở lần upload sau
   lastUpdate: null,  // ISO string của lần cập nhật data gần nhất
+  settings: {
+    defaultReturnFee: 5000,  // Phí hoàn mặc định cho đơn KTC (VTP không ghi trong Excel)
+  },
   dateFrom: null,
   dateTo: null,
   orderFilter: 'all',
@@ -1806,6 +1837,10 @@ async function loadState() {
     const lu = localStorage.getItem('doi-soat-last-update');
     if (lu) state.lastUpdate = lu;
   } catch(e) {}
+  try {
+    const st = localStorage.getItem('doi-soat-settings');
+    if (st) state.settings = Object.assign(state.settings, JSON.parse(st));
+  } catch(e) {}
 
   // Chỉ tự tạo mẫu nếu app hoàn toàn mới (chưa từng dùng)
   // Sau khi user xóa data, không tự tạo lại
@@ -1835,6 +1870,7 @@ async function saveState() {
   try { localStorage.setItem('doi-soat-partial-cogs', JSON.stringify(state.partialCogs)); } catch(e){}
   try { localStorage.setItem('doi-soat-orphan-1p1', JSON.stringify(state.orphan1P1Buffer)); } catch(e){}
   try { if (state.lastUpdate) localStorage.setItem('doi-soat-last-update', state.lastUpdate); } catch(e){}
+  try { localStorage.setItem('doi-soat-settings', JSON.stringify(state.settings)); } catch(e){}
 }
 
 // ============================================================================
@@ -2287,26 +2323,32 @@ function renderDashboard() {
   // ===== BẢNG CHI PHÍ =====
   // Tách phí ship theo loại đơn
   let shipCostSuccess = 0, shipCostPartial = 0, shipCostReturned = 0, returnFeeSum = 0, cogsSum = 0;
+  let ktcReturnCount = 0;  // số đơn hoàn KTC để tính phí hoàn ước tính
   allFilteredOrders.forEach(o => {
     if (o.status === 'cancelled') return; // đơn hủy không tính chi phí
     if (o.status === 'success') {
       shipCostSuccess += o.shipFee || 0;
       cogsSum += o.items.reduce((s, it) => s + it.unitCost * it.qty, 0);
     } else if (o.status === 'partial') {
-      shipCostPartial += o.shipFee || 0;
+      shipCostPartial += o.shipFee || 0;        // phí ship đi (đơn gốc)
+      returnFeeSum += o.returnFee || 0;         // phí ship hoàn 1P1 (đã lưu khi parse)
       const partialCogs = state.partialCogs[o.id];
       const fullCogs = o.items.reduce((s, it) => s + it.unitCost * it.qty, 0);
       cogsSum += (partialCogs !== undefined && partialCogs !== null && partialCogs !== '')
         ? Number(partialCogs)
         : Math.round(fullCogs * 0.5);
     } else if (o.status === 'returned' || o.status === 'failed') {
+      // Đơn hoàn KTC: shipFee là phí ship 2 chiều (VTP đã tính trọn gói)
       shipCostReturned += o.shipFee || 0;
-      returnFeeSum += o.returnFee || 0;
+      ktcReturnCount++;  // đếm đơn để tính phí hoàn ước tính
     }
   });
+  // Phí hoàn KTC ước tính = số đơn × phí mặc định (vì VTP không ghi trong Excel)
+  const defaultReturnFee = (state.settings && state.settings.defaultReturnFee) || 5000;
+  const ktcReturnFeeSum = ktcReturnCount * defaultReturnFee;
   const adsCost = totals.adsCost;
   const fixedCostSum = totals.fixedCost;
-  const totalCostSum = shipCostSuccess + shipCostPartial + shipCostReturned + returnFeeSum + adsCost + cogsSum + fixedCostSum;
+  const totalCostSum = shipCostSuccess + shipCostPartial + shipCostReturned + returnFeeSum + ktcReturnFeeSum + adsCost + cogsSum + fixedCostSum;
   const actualRev = totals.actualRevenue;
   const pctOf = (val) => actualRev > 0 ? ((val / actualRev) * 100).toFixed(1) + '%' : '—';
   const fmtOr = (val) => val > 0 ? fmt(val) : '—';
@@ -2318,6 +2360,8 @@ function renderDashboard() {
   setText2('cost-ship-returned-pct', pctOf(shipCostReturned));
   setText2('cost-return-fee', fmtOr(returnFeeSum));
   setText2('cost-return-fee-pct', pctOf(returnFeeSum));
+  setText2('cost-ktc-return-fee', fmtOr(ktcReturnFeeSum));
+  setText2('cost-ktc-return-fee-pct', pctOf(ktcReturnFeeSum));
   setText2('cost-ads', fmtOr(adsCost));
   setText2('cost-ads-pct', pctOf(adsCost));
   setText2('cost-cogs', fmtOr(cogsSum));
@@ -3537,6 +3581,25 @@ function loadSampleData() {
   generateSampleData();
 }
 
+// Settings
+function saveSettings() {
+  const input = document.getElementById('setting-default-return-fee');
+  if (input) {
+    const val = parseInt(input.value);
+    if (!isNaN(val) && val >= 0) {
+      state.settings.defaultReturnFee = val;
+    }
+  }
+  saveState();
+  renderAll();
+  toast('Đã lưu cài đặt');
+}
+
+function loadSettingsToUI() {
+  const input = document.getElementById('setting-default-return-fee');
+  if (input) input.value = state.settings.defaultReturnFee || 5000;
+}
+
 // Backup & Restore
 function downloadBackup() {
   const backup = {
@@ -3640,6 +3703,8 @@ document.querySelectorAll('.nav-item').forEach(item => {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     item.classList.add('active');
     document.getElementById('page-' + item.dataset.page).classList.add('active');
+    // Load settings UI nếu vào trang Cài đặt
+    if (item.dataset.page === 'settings') loadSettingsToUI();
     // Đóng sidebar trên mobile sau khi chọn trang
     closeSidebar();
     // Cuộn lên đầu trang
@@ -4022,6 +4087,9 @@ function applyVTPDataToOrders(vtpOrders) {
       original.status = 'partial';
       original.partialDetectionReasons = ['has_return_shipment_1p1'];
       original.codFixedOnVtp = original.actualRevenue !== original.pancakeRevenue;
+      // PHÍ HOÀN của đơn 1 phần = phí ship của đơn 1P1 (VTP gửi phần hàng còn lại về kho)
+      original.returnFee = rs.ship_fee || 0;
+      original.partialReturnTracking = rs.tracking;  // lưu để debug
       // Cập nhật vtpReturnStatus dựa vào status thật của đơn 1P1
       const rsStatus = (rs.status || '').toLowerCase().trim();
       if (rsStatus === 'đã trả' || rsStatus.includes('hoàn về kho') ||
@@ -4037,7 +4105,8 @@ function applyVTPDataToOrders(vtpOrders) {
       stats.partialList.push({
         original: original.vtpTracking,
         return: rs.tracking,
-        revenue: original.actualRevenue
+        revenue: original.actualRevenue,
+        returnFee: rs.ship_fee || 0
       });
     } else {
       stats.orphanReturns++;
