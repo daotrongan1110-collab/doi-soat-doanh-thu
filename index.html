@@ -680,14 +680,14 @@
       <!-- Quick date filter -->
       <div class="quick-date-bar" style="display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;">
         <span style="font-size: 12px; color: var(--text-muted); margin-right: 4px;">Lọc nhanh:</span>
-        <button class="pill" onclick="setQuickDate('today')">Hôm nay</button>
-        <button class="pill" onclick="setQuickDate('yesterday')">Hôm qua</button>
-        <button class="pill" onclick="setQuickDate('7days')">7 ngày qua</button>
-        <button class="pill" onclick="setQuickDate('30days')">30 ngày qua</button>
-        <button class="pill" onclick="setQuickDate('thisMonth')">Tháng này</button>
-        <button class="pill" onclick="setQuickDate('lastMonth')">Tháng trước</button>
-        <button class="pill" onclick="setQuickDate('thisYear')">Năm nay</button>
-        <button class="pill" onclick="setQuickDate('all')">Tất cả</button>
+        <button class="pill" data-preset="today" onclick="setQuickDate('today')">Hôm nay</button>
+        <button class="pill" data-preset="yesterday" onclick="setQuickDate('yesterday')">Hôm qua</button>
+        <button class="pill" data-preset="7days" onclick="setQuickDate('7days')">7 ngày qua</button>
+        <button class="pill" data-preset="30days" onclick="setQuickDate('30days')">30 ngày qua</button>
+        <button class="pill" data-preset="thisMonth" onclick="setQuickDate('thisMonth')">Tháng này</button>
+        <button class="pill" data-preset="lastMonth" onclick="setQuickDate('lastMonth')">Tháng trước</button>
+        <button class="pill" data-preset="thisYear" onclick="setQuickDate('thisYear')">Năm nay</button>
+        <button class="pill" data-preset="all" onclick="setQuickDate('all')">Tất cả</button>
       </div>
 
       <!-- KPIs - Tài chính -->
@@ -946,14 +946,14 @@
       <!-- Quick date filter -->
       <div class="quick-date-bar" style="display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;">
         <span style="font-size: 12px; color: var(--text-muted); margin-right: 4px;">Lọc nhanh:</span>
-        <button class="pill" onclick="setQuickDate('today')">Hôm nay</button>
-        <button class="pill" onclick="setQuickDate('yesterday')">Hôm qua</button>
-        <button class="pill" onclick="setQuickDate('7days')">7 ngày qua</button>
-        <button class="pill" onclick="setQuickDate('30days')">30 ngày qua</button>
-        <button class="pill" onclick="setQuickDate('thisMonth')">Tháng này</button>
-        <button class="pill" onclick="setQuickDate('lastMonth')">Tháng trước</button>
-        <button class="pill" onclick="setQuickDate('thisYear')">Năm nay</button>
-        <button class="pill" onclick="setQuickDate('all')">Tất cả</button>
+        <button class="pill" data-preset="today" onclick="setQuickDate('today')">Hôm nay</button>
+        <button class="pill" data-preset="yesterday" onclick="setQuickDate('yesterday')">Hôm qua</button>
+        <button class="pill" data-preset="7days" onclick="setQuickDate('7days')">7 ngày qua</button>
+        <button class="pill" data-preset="30days" onclick="setQuickDate('30days')">30 ngày qua</button>
+        <button class="pill" data-preset="thisMonth" onclick="setQuickDate('thisMonth')">Tháng này</button>
+        <button class="pill" data-preset="lastMonth" onclick="setQuickDate('lastMonth')">Tháng trước</button>
+        <button class="pill" data-preset="thisYear" onclick="setQuickDate('thisYear')">Năm nay</button>
+        <button class="pill" data-preset="all" onclick="setQuickDate('all')">Tất cả</button>
       </div>
 
       <div class="card" style="padding: 0;">
@@ -1027,6 +1027,7 @@
             <span><span style="color: #E8B84A; font-weight: 600;" id="orders-summary-partial">0</span> <span style="color: var(--text-muted);">1 phần</span></span>
             <span><span style="color: var(--red); font-weight: 600;" id="orders-summary-returned">0</span> <span style="color: var(--text-muted);">hoàn</span></span>
             <span><span id="orders-summary-shipping" style="font-weight: 600;">0</span> <span style="color: var(--text-muted);">đang giao</span></span>
+            <span><span id="orders-summary-sent" style="font-weight: 600;">0</span> <span style="color: var(--text-muted);">đã bắn</span></span>
             <span><span id="orders-summary-pending" style="font-weight: 600;">0</span> <span style="color: var(--text-muted);">chưa bắn</span></span>
             <span><span id="orders-summary-cancelled" style="font-weight: 600;">0</span> <span style="color: var(--text-muted);">hủy</span></span>
           </div>
@@ -1083,20 +1084,21 @@
           <div class="card-header">
             <div>
               <div class="card-title">Từ Pancake</div>
-              <div class="card-subtitle">Đồng bộ tự động từ Google Sheet (Pancake đẩy real-time)</div>
+              <div class="card-subtitle">Đồng bộ tự động từ Google Sheet (hỗ trợ nhiều shop)</div>
+            </div>
+            <div>
+              <button class="btn btn-primary" onclick="addPancakeShop()" style="font-size: 13px;">+ Thêm shop</button>
             </div>
           </div>
-          <div class="field" style="margin-bottom: 12px;">
-            <label>Link CSV Google Sheet (export?format=csv&gid=...)</label>
-            <input type="text" id="pancake-sheet-url" placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv&gid=..." style="font-family: monospace; font-size: 11px;">
-            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
-              Sheet phải set "Anyone with the link" — Viewer trong mục Share
-            </div>
-          </div>
-          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">
+
+          <!-- Danh sách shop -->
+          <div id="pancake-shops-list" style="margin-bottom: 14px;"></div>
+
+          <!-- Cài đặt auto-sync chung -->
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; padding: 10px 12px; background: var(--surface-2); border-radius: 6px;">
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
               <input type="checkbox" id="pancake-auto-sync" onchange="togglePancakeAutoSync()">
-              <span>Tự đồng bộ mỗi</span>
+              <span>Tự đồng bộ tất cả shop mỗi</span>
             </label>
             <select id="pancake-auto-sync-interval" onchange="togglePancakeAutoSync()" style="padding: 4px 8px; font-size: 13px;">
               <option value="2">2 phút</option>
@@ -1108,9 +1110,11 @@
             </select>
             <span id="pancake-next-sync" style="font-size: 12px; color: var(--text-muted);"></span>
           </div>
+
+          <!-- Action buttons -->
           <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <button class="btn btn-primary" onclick="syncPancakeFromSheet()">🔄 Đồng bộ ngay</button>
-            <button class="btn" onclick="document.getElementById('file-pancake').click()">📁 Hoặc upload file CSV</button>
+            <button class="btn btn-primary" onclick="syncAllPancakeShops()">🔄 Đồng bộ tất cả</button>
+            <button class="btn" onclick="document.getElementById('file-pancake').click()">📁 Upload file CSV</button>
             <input type="file" id="file-pancake" accept=".csv,.xlsx,.txt" style="display: none;">
           </div>
           <div id="pancake-sync-result" style="margin-top: 14px; display: none;"></div>
@@ -1264,7 +1268,7 @@
             <thead>
               <tr>
                 <th rowspan="2" style="vertical-align: middle;">Tháng</th>
-                <th colspan="5" style="text-align: center; border-left: 1px solid var(--border); border-right: 1px solid var(--border); background: rgba(111,168,220,0.08);">Số lượng đơn</th>
+                <th colspan="6" style="text-align: center; border-left: 1px solid var(--border); border-right: 1px solid var(--border); background: rgba(111,168,220,0.08);">Số lượng đơn</th>
                 <th colspan="2" style="text-align: center; border-right: 1px solid var(--border); background: rgba(127,176,105,0.08);">Doanh thu</th>
                 <th colspan="5" style="text-align: center; border-right: 1px solid var(--border); background: rgba(215,100,100,0.08);">Chi phí</th>
                 <th colspan="3" style="text-align: center; background: rgba(232,184,74,0.08);">Hiệu quả</th>
@@ -1272,6 +1276,7 @@
               <tr>
                 <th class="num" style="border-left: 1px solid var(--border);">Tạo (Pancake)</th>
                 <th class="num">Đã bắn VTP</th>
+                <th class="num">Đang giao</th>
                 <th class="num">Thành công</th>
                 <th class="num">Hoàn/KTC</th>
                 <th class="num" style="border-right: 1px solid var(--border);">Hủy</th>
@@ -1312,14 +1317,14 @@
       <!-- Quick date filter -->
       <div class="quick-date-bar" style="display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;">
         <span style="font-size: 12px; color: var(--text-muted); margin-right: 4px;">Lọc nhanh:</span>
-        <button class="pill" onclick="setQuickDate('today')">Hôm nay</button>
-        <button class="pill" onclick="setQuickDate('yesterday')">Hôm qua</button>
-        <button class="pill" onclick="setQuickDate('7days')">7 ngày qua</button>
-        <button class="pill" onclick="setQuickDate('30days')">30 ngày qua</button>
-        <button class="pill" onclick="setQuickDate('thisMonth')">Tháng này</button>
-        <button class="pill" onclick="setQuickDate('lastMonth')">Tháng trước</button>
-        <button class="pill" onclick="setQuickDate('thisYear')">Năm nay</button>
-        <button class="pill" onclick="setQuickDate('all')">Tất cả</button>
+        <button class="pill" data-preset="today" onclick="setQuickDate('today')">Hôm nay</button>
+        <button class="pill" data-preset="yesterday" onclick="setQuickDate('yesterday')">Hôm qua</button>
+        <button class="pill" data-preset="7days" onclick="setQuickDate('7days')">7 ngày qua</button>
+        <button class="pill" data-preset="30days" onclick="setQuickDate('30days')">30 ngày qua</button>
+        <button class="pill" data-preset="thisMonth" onclick="setQuickDate('thisMonth')">Tháng này</button>
+        <button class="pill" data-preset="lastMonth" onclick="setQuickDate('lastMonth')">Tháng trước</button>
+        <button class="pill" data-preset="thisYear" onclick="setQuickDate('thisYear')">Năm nay</button>
+        <button class="pill" data-preset="all" onclick="setQuickDate('all')">Tất cả</button>
       </div>
 
       <div class="filter-bar">
@@ -1583,12 +1588,36 @@
           <div class="page-title">Đối soát COD</div>
           <div class="page-subtitle">Các phiên chuyển tiền từ Viettel Post về tài khoản</div>
         </div>
+        <div class="page-actions">
+          <div class="date-range">
+            <input type="date" id="date-from-cod">
+            <span style="color: var(--text-dim);">—</span>
+            <input type="date" id="date-to-cod">
+          </div>
+          <button class="btn btn-primary" onclick="openPayoutPasteModal()">📋 Nhập từ VTP</button>
+        </div>
+      </div>
+
+      <!-- Quick date filter -->
+      <div class="quick-date-bar" style="display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;">
+        <span style="font-size: 12px; color: var(--text-muted); margin-right: 4px;">Lọc nhanh:</span>
+        <button class="pill" data-preset="today" onclick="setQuickDate('today')">Hôm nay</button>
+        <button class="pill" data-preset="yesterday" onclick="setQuickDate('yesterday')">Hôm qua</button>
+        <button class="pill" data-preset="7days" onclick="setQuickDate('7days')">7 ngày qua</button>
+        <button class="pill" data-preset="30days" onclick="setQuickDate('30days')">30 ngày qua</button>
+        <button class="pill" data-preset="thisMonth" onclick="setQuickDate('thisMonth')">Tháng này</button>
+        <button class="pill" data-preset="lastMonth" onclick="setQuickDate('lastMonth')">Tháng trước</button>
+        <button class="pill" data-preset="thisYear" onclick="setQuickDate('thisYear')">Năm nay</button>
+        <button class="pill" data-preset="all" onclick="setQuickDate('all')">Tất cả</button>
       </div>
 
       <div class="banner">
         <span class="banner-icon">ⓘ</span>
         <div>
-          Viettel Post gom tiền COD của nhiều đơn vào các <strong>phiên chuyển tiền</strong> (thường 1-3 ngày/phiên) rồi chuyển khoản 1 lần. Bạn cần <strong>nhập tay</strong> các phiên chuyển tiền từ sao kê ngân hàng để theo dõi (tương lai có thể tự đồng bộ qua webhook VTP). Mỗi phiên có ngày, tổng tiền và mã phiên.
+          Viettel Post gom tiền COD của nhiều đơn vào các <strong>phiên chuyển tiền</strong>. Cách dùng:
+          (1) Vào trang VTP Partner → Tài chính → Tiền hàng đã trả;
+          (2) Bôi đen các phiên cần đối soát (có thể chọn cả bảng);
+          (3) Bấm <strong>"📋 Nhập từ VTP"</strong> trong app, paste vào → app tự trích xuất.
         </div>
       </div>
 
@@ -1633,12 +1662,12 @@
               <tr>
                 <th style="width: 48px;">STT</th>
                 <th>Mã phiên</th>
-                <th>Ngày phiên</th>
-                <th class="num">Số đơn</th>
-                <th class="num">Tổng COD</th>
+                <th>Ngày đối soát</th>
+                <th class="num">Tiền COD</th>
+                <th class="num">Phí cước</th>
+                <th class="num">Tiền thu về</th>
                 <th>Trạng thái</th>
-                <th>Ngày nhận TK</th>
-                <th></th>
+                <th>Nguồn</th>
               </tr>
             </thead>
             <tbody id="payouts-tbody"></tbody>
@@ -1819,6 +1848,35 @@
 
 <div class="toast" id="toast"></div>
 
+  <!-- Modal nhập phiên VTP từ paste -->
+  <div id="payout-paste-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; max-width: 700px; width: 100%; max-height: 90vh; overflow: auto;">
+      <div style="padding: 18px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div style="font-size: 16px; font-weight: 600;">Nhập phiên VTP từ trang Tài chính</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Bôi đen bảng trong VTP Partner → Ctrl+C → paste vào dưới đây</div>
+        </div>
+        <button class="btn" onclick="closePayoutPasteModal()" style="padding: 4px 10px;">✕</button>
+      </div>
+      <div style="padding: 20px;">
+        <div style="background: var(--surface-2); padding: 12px; border-radius: 6px; font-size: 12px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.6;">
+          <strong style="color: var(--text);">Hướng dẫn:</strong><br>
+          1. Vào trang VTP Partner → Tài chính → Tiền hàng đã trả<br>
+          2. Bôi đen các dòng cần nhập (cả tiêu đề bảng càng tốt)<br>
+          3. Ctrl+C, sang đây Ctrl+V<br>
+          4. App sẽ tự nhận diện cột: Mã bảng kê, Ngày đối soát, Tiền COD, Tiền cước, Tiền thu về
+        </div>
+        <textarea id="payout-paste-textarea" placeholder="Paste data ở đây (Ctrl+V)..." style="width: 100%; min-height: 200px; padding: 10px; font-family: monospace; font-size: 12px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); border-radius: 4px; resize: vertical;"></textarea>
+        <div id="payout-paste-preview" style="margin-top: 14px; display: none;"></div>
+      </div>
+      <div style="padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn" onclick="closePayoutPasteModal()">Hủy</button>
+        <button class="btn" onclick="previewPayoutPaste()">👀 Xem trước</button>
+        <button class="btn btn-primary" onclick="importPayoutsFromPaste()">✓ Lưu vào app</button>
+      </div>
+    </div>
+  </div>
+
 <script>
 // ============================================================================
 // STATE & STORAGE
@@ -1846,7 +1904,8 @@ const state = {
   },
   settings: {
     defaultReturnFee: 5000,  // Phí hoàn mặc định cho đơn KTC (VTP không ghi trong Excel)
-    pancakeSheetUrl: '',  // Link CSV Pancake auto-sync từ Google Sheet
+    pancakeSheetUrl: '',  // Link CSV Pancake auto-sync (legacy single shop)
+    pancakeSheets: [],     // Array of {id, name, url} cho multi-shop
     pancakeAutoSync: true,  // Tự sync khi mở app + định kỳ
     pancakeAutoSyncInterval: 5,  // Mỗi 5 phút
   },
@@ -1855,6 +1914,7 @@ const state = {
   orderFilter: 'all',
   orderPage: 1,
   orderPageSize: 200,
+  quickDatePreset: 'all',
   productSort: 'profit',
   codFilter: 'all',
   returnFilter: 'all',
@@ -2353,7 +2413,8 @@ function renderDashboard() {
   const cntPartial = allFilteredOrders.filter(o => o.status === 'partial').length;
   const cntReturned = allFilteredOrders.filter(o => o.status === 'returned' || o.status === 'failed').length;
   const cntCancelled = allFilteredOrders.filter(o => o.status === 'cancelled').length;
-  const cntShipping = allFilteredOrders.filter(o => o.status === 'shipping' || o.status === 'sent').length;
+  // CHỈ shipping thật (VTP đã lấy hàng) — KHÔNG tính 'sent' (đã bắn nhưng VTP chưa lấy)
+  const cntShipping = allFilteredOrders.filter(o => o.status === 'shipping').length;
 
   // Tổng đơn gửi VTP = đã có kết quả giao (TC thực tế + 1 phần + hoàn)
   const totalVtpDelivered = cntSuccess + cntPartial + cntReturned;
@@ -2619,13 +2680,18 @@ function renderOrders() {
   }
 
   // Summary counts (theo orders đã filter)
+  // QUAN TRỌNG: phân biệt rõ status:
+  //   - 'shipping' = đang giao (VTP đã lấy hàng, đang trên đường)
+  //   - 'sent' = đã bắn VTP nhưng VTP chưa lấy/chưa cập nhật (mặc định cho đơn có vtpTracking từ Pancake mà chưa có VTP data)
+  //   - 'pending' = chưa có vtpTracking
   const summaryCounts = {
     total: orders.length,
     success: orders.filter(o => o.status === 'success').length,
     partial: orders.filter(o => o.status === 'partial').length,
     returned: orders.filter(o => o.status === 'returned' || o.status === 'failed').length,
-    shipping: orders.filter(o => o.status === 'shipping' || o.status === 'sent').length,
-    pending: orders.filter(o => o.status === 'pending').length,
+    shipping: orders.filter(o => o.status === 'shipping').length,  // CHỈ shipping thật, không tính sent
+    sent: orders.filter(o => o.status === 'sent').length,           // Đã bắn nhưng chưa giao
+    pending: orders.filter(o => o.status === 'pending').length,     // Chưa bắn VTP
     cancelled: orders.filter(o => o.status === 'cancelled').length
   };
   const setSummary = (id, val) => {
@@ -2637,6 +2703,7 @@ function renderOrders() {
   setSummary('orders-summary-partial', summaryCounts.partial);
   setSummary('orders-summary-returned', summaryCounts.returned);
   setSummary('orders-summary-shipping', summaryCounts.shipping);
+  setSummary('orders-summary-sent', summaryCounts.sent);
   setSummary('orders-summary-pending', summaryCounts.pending);
   setSummary('orders-summary-cancelled', summaryCounts.cancelled);
 
@@ -2859,7 +2926,8 @@ function aggregateByMonth() {
     const month = o.date.slice(0, 7);
     if (!months[month]) {
       months[month] = {
-        month, orders: 0, pancakeOrderCount: 0, sentCount: 0, successCount: 0, returnLikeCount: 0, cancelledCount: 0,
+        month, orders: 0, pancakeOrderCount: 0, sentCount: 0, shippingCount: 0,
+        successCount: 0, returnLikeCount: 0, cancelledCount: 0,
         pancakeRevenue: 0, actualRevenue: 0, cogs: 0, shipFee: 0, returnFee: 0
       };
     }
@@ -2877,6 +2945,9 @@ function aggregateByMonth() {
     if (o.vtpTracking && o.vtpTracking !== '') {
       m.sentCount++;
     }
+
+    // Đang giao
+    if (o.status === 'shipping') m.shippingCount++;
 
     // Doanh thu thực tế: CHỈ tính từ đơn success/partial
     if (o.status === 'success' || o.status === 'partial') {
@@ -2940,6 +3011,7 @@ function renderMonthly() {
     acc.orders += r.orders;
     acc.pancakeOrderCount += (r.pancakeOrderCount || 0);
     acc.sentCount += (r.sentCount || 0);
+    acc.shippingCount += (r.shippingCount || 0);
     acc.successCount += r.successCount;
     acc.returnLikeCount += r.returnLikeCount;
     acc.cancelledCount += r.cancelledCount;
@@ -2952,7 +3024,7 @@ function renderMonthly() {
     acc.fixedCost += r.fixedCost;
     acc.profit += r.profit;
     return acc;
-  }, { orders:0, pancakeOrderCount:0, sentCount:0, successCount:0, returnLikeCount:0, cancelledCount:0, pancakeRevenue:0, actualRevenue:0, adsCost:0, cogs:0, shipFee:0, returnFee:0, fixedCost:0, profit:0 });
+  }, { orders:0, pancakeOrderCount:0, sentCount:0, shippingCount:0, successCount:0, returnLikeCount:0, cancelledCount:0, pancakeRevenue:0, actualRevenue:0, adsCost:0, cogs:0, shipFee:0, returnFee:0, fixedCost:0, profit:0 });
   const tSuccessRate = t.orders > 0 ? (t.successCount / t.orders) * 100 : 0;
   const tMargin = t.actualRevenue > 0 ? (t.profit / t.actualRevenue) * 100 : 0;
 
@@ -2961,6 +3033,7 @@ function renderMonthly() {
       <td><strong>TỔNG ${rows.length} tháng</strong></td>
       <td class="num" style="border-left: 1px solid var(--border);"><strong>${t.pancakeOrderCount.toLocaleString('vi-VN')}</strong></td>
       <td class="num"><strong>${t.sentCount.toLocaleString('vi-VN')}</strong></td>
+      <td class="num"><strong>${t.shippingCount.toLocaleString('vi-VN')}</strong></td>
       <td class="num"><strong class="pos">${t.successCount.toLocaleString('vi-VN')}</strong></td>
       <td class="num"><strong class="neg">${t.returnLikeCount.toLocaleString('vi-VN')}</strong></td>
       <td class="num" style="border-right: 1px solid var(--border);"><strong>${t.cancelledCount.toLocaleString('vi-VN')}</strong></td>
@@ -2982,6 +3055,7 @@ function renderMonthly() {
       <td><strong>${monthLabel(r.month)}</strong></td>
       <td class="num" style="border-left: 1px solid var(--border);">${r.pancakeOrderCount || 0}</td>
       <td class="num">${r.sentCount || 0}</td>
+      <td class="num">${r.shippingCount || 0}</td>
       <td class="num"><span class="badge success">${r.successCount}</span></td>
       <td class="num"><span class="badge danger">${r.returnLikeCount}</span></td>
       <td class="num" style="border-right: 1px solid var(--border);"><span class="badge" style="background:var(--surface-2); color:var(--text-muted)">${r.cancelledCount}</span></td>
@@ -3596,11 +3670,25 @@ function updatePartialCogs(orderId, value) {
 function renderCOD() {
   const payouts = state.payouts || [];
 
-  // KPIs
-  const received = payouts.filter(p => p.status === 'received');
-  const processing = payouts.filter(p => p.status === 'processing');
-  const receivedValue = received.reduce((s, p) => s + p.totalCOD, 0);
-  const processingValue = processing.reduce((s, p) => s + p.totalCOD, 0);
+  // Áp date filter — schema mới dùng .date, schema cũ dùng .batchDate
+  const inDate = (p) => {
+    const d = p.date || p.batchDate;
+    if (state.dateFrom && d < state.dateFrom) return false;
+    if (state.dateTo && d > state.dateTo) return false;
+    return true;
+  };
+  const filteredByDate = payouts.filter(inDate);
+
+  // Helper lấy tiền theo schema (mới: codAmount/netAmount; cũ: totalCOD)
+  const getCod = (p) => p.codAmount || p.totalCOD || 0;
+  const getNet = (p) => p.netAmount !== undefined ? p.netAmount : (p.totalCOD || 0);
+  const getFee = (p) => p.feeAmount !== undefined ? p.feeAmount : 0;
+
+  // KPIs (theo date filter)
+  const received = filteredByDate.filter(p => p.status === 'received');
+  const processing = filteredByDate.filter(p => p.status === 'processing');
+  const receivedValue = received.reduce((s, p) => s + getNet(p), 0);
+  const processingValue = processing.reduce((s, p) => s + getCod(p), 0);
   const totalValue = receivedValue + processingValue;
 
   const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
@@ -3608,15 +3696,15 @@ function renderCOD() {
   setText('payout-received-count', received.length);
   setText('payout-processing', fmtShort(processingValue));
   setText('payout-processing-count', processing.length);
-  setText('payout-total-count', payouts.length.toLocaleString('vi-VN'));
+  setText('payout-total-count', filteredByDate.length.toLocaleString('vi-VN'));
   setText('payout-total-value', fmtShort(totalValue));
 
-  // Filter
-  let filtered = payouts.slice();
+  // Status filter
+  let filtered = filteredByDate.slice();
   if (state.codFilter === 'received') filtered = filtered.filter(p => p.status === 'received');
   else if (state.codFilter === 'processing') filtered = filtered.filter(p => p.status === 'processing');
 
-  filtered.sort((a, b) => b.batchDate.localeCompare(a.batchDate));
+  filtered.sort((a, b) => (b.date || b.batchDate || '').localeCompare(a.date || a.batchDate || ''));
 
   const shownEl = document.getElementById('payouts-shown-count');
   if (shownEl) shownEl.textContent = filtered.length.toLocaleString('vi-VN');
@@ -3629,29 +3717,40 @@ function renderCOD() {
     return;
   }
 
-  tbody.innerHTML = filtered.map((p, idx) => {
+  // Tổng cộng (cho dòng tổng đầu bảng)
+  const totalCod = filtered.reduce((s, p) => s + getCod(p), 0);
+  const totalFee = filtered.reduce((s, p) => s + getFee(p), 0);
+  const totalNet = filtered.reduce((s, p) => s + getNet(p), 0);
+
+  const totalRow = `
+    <tr style="background: var(--surface-2); font-weight: 600; border-bottom: 2px solid var(--accent);">
+      <td colspan="3" style="padding: 12px 16px;"><strong>TỔNG ${filtered.length} phiên</strong></td>
+      <td class="num"><strong>${fmt(totalCod)}</strong></td>
+      <td class="num"><strong style="color: var(--red);">-${fmt(totalFee)}</strong></td>
+      <td class="num"><strong style="color: var(--green);">${fmt(totalNet)}</strong></td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+  `;
+
+  tbody.innerHTML = totalRow + filtered.map((p, idx) => {
     const statusBadge = p.status === 'received'
       ? '<span class="badge success">Đã chuyển</span>'
       : '<span class="badge warn">Đang xử lý</span>';
+    const dateField = p.date || p.batchDate;
+    const cod = getCod(p);
+    const fee = getFee(p);
+    const net = getNet(p);
     return `
       <tr>
         <td style="color: var(--text-muted); font-family: 'Geist Mono', monospace; font-size: 12px;">${idx + 1}</td>
-        <td><strong>${p.id}</strong></td>
-        <td>${fmtDate(p.batchDate)}</td>
-        <td class="num"><strong>${p.orderIds.length}</strong></td>
-        <td class="num"><strong>${fmt(p.totalCOD)}</strong></td>
+        <td><strong style="font-family: 'Geist Mono', monospace; font-size: 12px;">${p.id}</strong></td>
+        <td>${dateField ? fmtDate(dateField) : '—'}</td>
+        <td class="num">${fmt(cod)}</td>
+        <td class="num" style="color: var(--red);">${fee > 0 ? '-' + fmt(fee) : '—'}</td>
+        <td class="num"><strong style="color: var(--green);">${fmt(net)}</strong></td>
         <td>${statusBadge}</td>
-        <td>${p.payoutDate ? fmtDate(p.payoutDate) : '<span style="color: var(--text-dim);">—</span>'}</td>
-        <td><button class="link" onclick="togglePayoutDetail('${p.id}', this)">Xem đơn</button></td>
-      </tr>
-      <tr id="payout-detail-${p.id}" style="display: none; background: var(--surface-2);">
-        <td></td>
-        <td colspan="7" style="padding: 12px 16px;">
-          <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">Danh sách ${p.orderIds.length} đơn trong phiên:</div>
-          <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-            ${p.orderIds.map(oid => `<code style="padding: 3px 8px; background: var(--bg); border-radius: 4px; font-family: 'Geist Mono', monospace; font-size: 12px;">${oid}</code>`).join('')}
-          </div>
-        </td>
+        <td>${p.source === 'vtp_paste' ? '<span class="badge info">VTP</span>' : ''}</td>
       </tr>
     `;
   }).join('');
@@ -3973,23 +4072,28 @@ document.querySelectorAll('.pill').forEach(p => {
   });
 });
 
-// Date filter — sync trên cả 3 trang (Dashboard, Daily, By Product)
+// Date filter — sync trên cả 4 trang (Dashboard, Daily, By Product, COD)
 function syncDateInputs(from, to) {
-  ['date-from', 'date-from-daily', 'date-from-product'].forEach(id => {
+  ['date-from', 'date-from-daily', 'date-from-product', 'date-from-cod'].forEach(id => {
     const el = document.getElementById(id);
     if (el && el.value !== from) el.value = from || '';
   });
-  ['date-to', 'date-to-daily', 'date-to-product'].forEach(id => {
+  ['date-to', 'date-to-daily', 'date-to-product', 'date-to-cod'].forEach(id => {
     const el = document.getElementById(id);
     if (el && el.value !== to) el.value = to || '';
   });
 }
 
 // Quick date filter — set ngày theo preset
-function setQuickDate(preset) {
+function setQuickDate(preset, btnEl) {
   const now = new Date();
   const fmt = (d) => d.toISOString().split('T')[0];
   let from = null, to = null;
+
+  // Tích lần 2 cùng pill → bỏ chọn (về Tất cả)
+  if (state.quickDatePreset === preset && preset !== 'all') {
+    preset = 'all';
+  }
 
   if (preset === 'today') {
     from = to = fmt(now);
@@ -4018,14 +4122,19 @@ function setQuickDate(preset) {
 
   state.dateFrom = from;
   state.dateTo = to;
+  state.quickDatePreset = preset;
   syncDateInputs(from, to);
+  // Update active class trên TẤT CẢ pill (kể cả ở các trang khác)
+  document.querySelectorAll('.quick-date-bar .pill').forEach(b => {
+    b.classList.toggle('active', b.dataset.preset === preset && preset !== 'all');
+  });
   // Reset trang về 1 khi đổi date
   state.orderPage = 1;
   renderAll();
 }
 
 function bindDateInputs() {
-  ['date-from', 'date-from-daily', 'date-from-product'].forEach(id => {
+  ['date-from', 'date-from-daily', 'date-from-product', 'date-from-cod'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('change', (e) => {
@@ -4034,7 +4143,7 @@ function bindDateInputs() {
       renderAll();
     });
   });
-  ['date-to', 'date-to-daily', 'date-to-product'].forEach(id => {
+  ['date-to', 'date-to-daily', 'date-to-product', 'date-to-cod'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('change', (e) => {
@@ -4045,6 +4154,139 @@ function bindDateInputs() {
   });
 }
 bindDateInputs();
+
+// ============================================================================
+// MODAL NHẬP PHIÊN COD VTP TỪ PASTE
+// ============================================================================
+function openPayoutPasteModal() {
+  document.getElementById('payout-paste-modal').style.display = 'flex';
+  document.getElementById('payout-paste-textarea').value = '';
+  document.getElementById('payout-paste-preview').style.display = 'none';
+  document.getElementById('payout-paste-preview').innerHTML = '';
+}
+function closePayoutPasteModal() {
+  document.getElementById('payout-paste-modal').style.display = 'none';
+}
+
+// Parse text paste từ VTP — tự nhận biết format
+function parseVtpPayoutPaste(text) {
+  if (!text || !text.trim()) return [];
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const payouts = [];
+  const tabPattern = lines.map(l => l.split('\t').map(c => c.trim())).filter(parts => parts.length >= 3);
+
+  for (const parts of tabPattern) {
+    const codeIdx = parts.findIndex(p => /^(PCOD|BK)[-_]/i.test(p));
+    if (codeIdx === -1) continue;
+    const code = parts[codeIdx];
+
+    const dateIdx = parts.findIndex(p => /\d{1,2}\/\d{1,2}\/\d{4}/.test(p));
+    let dateStr = '';
+    if (dateIdx >= 0) {
+      const m = parts[dateIdx].match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (m) dateStr = `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+    }
+
+    const numbers = [];
+    for (const p of parts) {
+      const cleaned = p.replace(/[đ,\s'"]/g, '').replace(/[\.](?=\d{3})/g, '');
+      if (/^\d{3,}$/.test(cleaned)) numbers.push(parseInt(cleaned));
+    }
+    let codAmount = 0, feeAmount = 0, netAmount = 0;
+    if (numbers.length >= 3) {
+      codAmount = numbers[0]; feeAmount = numbers[1]; netAmount = numbers[2];
+    } else if (numbers.length === 2) {
+      codAmount = numbers[0]; netAmount = numbers[1]; feeAmount = codAmount - netAmount;
+    } else if (numbers.length === 1) {
+      codAmount = netAmount = numbers[0];
+    }
+
+    payouts.push({
+      id: code, date: dateStr,
+      codAmount: codAmount, feeAmount: feeAmount, netAmount: netAmount,
+      status: 'received', source: 'vtp_paste'
+    });
+  }
+  return payouts;
+}
+
+function previewPayoutPaste() {
+  const text = document.getElementById('payout-paste-textarea').value;
+  const previewEl = document.getElementById('payout-paste-preview');
+  const payouts = parseVtpPayoutPaste(text);
+
+  if (payouts.length === 0) {
+    previewEl.style.display = 'block';
+    previewEl.innerHTML = `<div style="padding: 12px; background: var(--red-soft); border-left: 3px solid var(--red); border-radius: 6px; font-size: 13px;"><strong style="color: var(--red);">❌ Không trích xuất được phiên nào.</strong> Kiểm tra: data đã copy đầy đủ chưa? Có chứa mã PCOD-... và ngày tháng?</div>`;
+    return;
+  }
+
+  const totalCod = payouts.reduce((s, p) => s + p.codAmount, 0);
+  const totalNet = payouts.reduce((s, p) => s + p.netAmount, 0);
+  const totalFee = payouts.reduce((s, p) => s + p.feeAmount, 0);
+
+  const rows = payouts.slice(0, 20).map((p, i) => `
+    <tr>
+      <td style="padding: 4px 8px;">${i + 1}</td>
+      <td style="padding: 4px 8px; font-family: monospace; font-size: 11px;">${p.id}</td>
+      <td style="padding: 4px 8px;">${p.date || '<span style="color: var(--red);">!</span>'}</td>
+      <td class="num" style="padding: 4px 8px;">${fmt(p.codAmount)}</td>
+      <td class="num" style="padding: 4px 8px;">${fmt(p.feeAmount)}</td>
+      <td class="num" style="padding: 4px 8px;"><strong>${fmt(p.netAmount)}</strong></td>
+    </tr>
+  `).join('');
+
+  previewEl.style.display = 'block';
+  previewEl.innerHTML = `
+    <div style="padding: 12px; background: var(--green-soft); border-left: 3px solid var(--green); border-radius: 6px; font-size: 13px; margin-bottom: 10px;"><strong style="color: var(--green);">✓ Trích xuất được ${payouts.length} phiên</strong></div>
+    <div style="overflow-x: auto;">
+      <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
+        <thead>
+          <tr style="border-bottom: 1px solid var(--border); color: var(--text-muted);">
+            <th style="padding: 4px 8px; text-align: left;">#</th>
+            <th style="padding: 4px 8px; text-align: left;">Mã phiên</th>
+            <th style="padding: 4px 8px; text-align: left;">Ngày</th>
+            <th class="num" style="padding: 4px 8px;">COD</th>
+            <th class="num" style="padding: 4px 8px;">Phí cước</th>
+            <th class="num" style="padding: 4px 8px;">Thu về</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+        <tfoot style="border-top: 2px solid var(--accent); font-weight: 600;">
+          <tr>
+            <td colspan="3" style="padding: 6px 8px;"><strong>TỔNG ${payouts.length} phiên</strong></td>
+            <td class="num" style="padding: 6px 8px;">${fmt(totalCod)}</td>
+            <td class="num" style="padding: 6px 8px;">${fmt(totalFee)}</td>
+            <td class="num" style="padding: 6px 8px;">${fmt(totalNet)}</td>
+          </tr>
+        </tfoot>
+      </table>
+      ${payouts.length > 20 ? `<div style="padding: 8px; text-align: center; color: var(--text-muted); font-size: 11px;">...và ${payouts.length - 20} phiên khác</div>` : ''}
+    </div>`;
+}
+
+function importPayoutsFromPaste() {
+  const text = document.getElementById('payout-paste-textarea').value;
+  const payouts = parseVtpPayoutPaste(text);
+  if (payouts.length === 0) { toast('Không trích xuất được phiên nào'); return; }
+  if (!Array.isArray(state.payouts)) state.payouts = [];
+  const existingMap = {};
+  state.payouts.forEach((p, idx) => { if (p.id) existingMap[p.id] = idx; });
+  let inserted = 0, updated = 0;
+  payouts.forEach(p => {
+    if (existingMap[p.id] !== undefined) {
+      state.payouts[existingMap[p.id]] = Object.assign({}, state.payouts[existingMap[p.id]], p);
+      updated++;
+    } else {
+      state.payouts.push(p);
+      inserted++;
+    }
+  });
+  saveState();
+  renderCOD();
+  closePayoutPasteModal();
+  toast(`✓ ${inserted} phiên mới, ${updated} cập nhật`);
+}
 
 // ============================================================================
 // PANCAKE - SYNC TỪ GOOGLE SHEET / UPLOAD CSV
@@ -4161,21 +4403,18 @@ function parsePancakeCSV(csvText, silent) {
 }
 
 // Áp dụng data Pancake vào state.orders (upsert theo ID)
-function applyPancakeData(rows) {
+function applyPancakeData(rows, shopName) {
   const stats = {
     total: rows.length,
     inserted: 0,
     updated: 0,
     unchanged: 0,
     skipped: 0,
-    sampleRemoved: 0,  // số đơn mẫu đã xóa
+    sampleRemoved: 0,  // vẫn giữ nhưng giờ caller xử lý
     skipList: []
   };
 
-  // Lần đầu sync Pancake → xóa data mẫu (id bắt đầu PO_) để tránh đếm trùng
-  const beforeCount = state.orders.length;
-  state.orders = state.orders.filter(o => !(o.id && o.id.startsWith('PO')));
-  stats.sampleRemoved = beforeCount - state.orders.length;
+  // Note: Sample data removal đã chuyển ra syncAllPancakeShops
 
   // Helper: lấy giá trị từ row, thử nhiều tên cột
   const getField = (row, ...names) => {
@@ -4234,7 +4473,15 @@ function applyPancakeData(rows) {
     if (dateMatch) {
       dateStr = `${dateMatch[3]}-${dateMatch[2].padStart(2,'0')}-${dateMatch[1].padStart(2,'0')}`;
     } else {
-      dateStr = new Date().toISOString().split('T')[0];
+      // KHÔNG có ngày → bỏ qua dòng này (tránh tạo đơn ma với ngày hôm nay)
+      stats.skipped++;
+      return;
+    }
+
+    // Bỏ qua dòng không có khách hàng VÀ không có COD VÀ không có sản phẩm (dòng rác)
+    if (!customer && !cod && !products && !productDetail) {
+      stats.skipped++;
+      return;
     }
 
     // Parse items
@@ -4275,6 +4522,7 @@ function applyPancakeData(rows) {
       o.pancakeRevenue = cod;  // COD Pancake = giá trị đơn = pancakeRevenue
       o.items = items;
       o.pancakeOrderRef = orderRef;
+      if (shopName) o.shopName = shopName;
       // Cập nhật nguồn: nếu chỉ có VTP → giờ có cả Pancake
       if (o.source === 'vtp_only') {
         o.source = 'pancake+vtp';
@@ -4317,7 +4565,8 @@ function applyPancakeData(rows) {
         codFixedOnVtp: false,
         partialDetectionReasons: [],
         vtpReturnStatus: null,
-        source: vtpTracking ? 'pancake+vtp' : 'pancake'
+        source: vtpTracking ? 'pancake+vtp' : 'pancake',
+        shopName: shopName || ''  // Tên shop để debug multi-shop
       };
       // Nếu Pancake báo hủy → status cancelled
       if (mapPancakeStatus(statusField) === 'cancelled') {
@@ -4366,42 +4615,239 @@ function showPancakeResult(type, content) {
           ${s.sampleRemoved > 0 ? `• <strong style="color: var(--text-muted);">${s.sampleRemoved}</strong> đơn mẫu cũ đã được xóa tự động` : ''}
         </div>
       </div>`;
+  } else if (type === 'success-multi' && typeof content === 'object') {
+    const s = content;
+    const shopRows = s.shopDetails.map(sd => `
+      <tr>
+        <td style="padding: 4px 8px;">${sd.shop}</td>
+        <td class="num" style="padding: 4px 8px;">${sd.total}</td>
+        <td class="num" style="padding: 4px 8px;"><span style="color: var(--green);">${sd.inserted}</span></td>
+        <td class="num" style="padding: 4px 8px;">${sd.updated}</td>
+        <td class="num" style="padding: 4px 8px; color: var(--text-muted);">${sd.unchanged}</td>
+      </tr>
+    `).join('');
+    el.innerHTML = `
+      <div style="padding: 14px; background: var(--green-soft); border-left: 3px solid var(--green); border-radius: 6px;">
+        <div style="font-weight: 500; color: var(--green); margin-bottom: 10px;">✅ Đã đồng bộ ${s.shops} shop · Tổng ${s.total} đơn</div>
+        <table style="width: 100%; font-size: 12px; border-collapse: collapse; margin-bottom: 8px;">
+          <thead>
+            <tr style="border-bottom: 1px solid var(--border); color: var(--text-muted);">
+              <th style="padding: 4px 8px; text-align: left;">Shop</th>
+              <th class="num" style="padding: 4px 8px;">Tổng</th>
+              <th class="num" style="padding: 4px 8px;">Mới</th>
+              <th class="num" style="padding: 4px 8px;">Cập nhật</th>
+              <th class="num" style="padding: 4px 8px;">Không đổi</th>
+            </tr>
+          </thead>
+          <tbody>${shopRows}</tbody>
+        </table>
+        <div style="font-size: 12px; line-height: 1.6;">
+          Tổng cộng: <strong>${s.inserted}</strong> đơn mới · <strong>${s.updated}</strong> cập nhật
+          ${s.skipped > 0 ? ` · <strong style="color: var(--accent);">${s.skipped}</strong> bỏ qua` : ''}
+          ${s.sampleRemoved > 0 ? ` · <span style="color: var(--text-muted);">${s.sampleRemoved} mẫu cũ đã xóa</span>` : ''}
+        </div>
+      </div>`;
   }
   el.style.display = 'block';
 }
 
-// Load URL + cài đặt auto-sync khi mở trang
+// Load cài đặt Pancake (multi-shop) + auto-sync khi mở trang
 function loadPancakeSheetUrl() {
-  const input = document.getElementById('pancake-sheet-url');
+  // Migration: nếu có pancakeSheetUrl cũ và pancakeSheets rỗng → chuyển sang shop đầu
+  if (state.settings.pancakeSheetUrl && (!state.settings.pancakeSheets || state.settings.pancakeSheets.length === 0)) {
+    state.settings.pancakeSheets = [{
+      id: 'shop_1',
+      name: 'Shop 1',
+      url: state.settings.pancakeSheetUrl
+    }];
+    state.settings.pancakeSheetUrl = '';  // clear legacy
+    saveState();
+  }
+  if (!state.settings.pancakeSheets) state.settings.pancakeSheets = [];
+
   const checkbox = document.getElementById('pancake-auto-sync');
   const intervalSelect = document.getElementById('pancake-auto-sync-interval');
-  if (input && state.settings && state.settings.pancakeSheetUrl) {
-    input.value = state.settings.pancakeSheetUrl;
-  }
   if (checkbox) {
     checkbox.checked = !!(state.settings && state.settings.pancakeAutoSync);
   }
   if (intervalSelect && state.settings && state.settings.pancakeAutoSyncInterval) {
     intervalSelect.value = String(state.settings.pancakeAutoSyncInterval);
   }
+  renderPancakeShopsList();
   updateNextSyncDisplay();
 }
 
-// Toggle auto-sync on/off
-function togglePancakeAutoSync() {
-  const checkbox = document.getElementById('pancake-auto-sync');
-  const intervalSelect = document.getElementById('pancake-auto-sync-interval');
-  if (!checkbox || !intervalSelect) return;
-  state.settings.pancakeAutoSync = checkbox.checked;
-  state.settings.pancakeAutoSyncInterval = parseInt(intervalSelect.value) || 5;
-  saveState();
-  setupAutoSync();
-  updateNextSyncDisplay();
-  if (checkbox.checked) {
-    toast(`Đã bật tự đồng bộ Pancake mỗi ${state.settings.pancakeAutoSyncInterval} phút`);
-  } else {
-    toast('Đã tắt tự đồng bộ Pancake');
+// Render danh sách shop Pancake
+function renderPancakeShopsList() {
+  const container = document.getElementById('pancake-shops-list');
+  if (!container) return;
+  const shops = state.settings.pancakeSheets || [];
+  if (shops.length === 0) {
+    container.innerHTML = `
+      <div style="padding: 20px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border); border-radius: 6px; font-size: 13px;">
+        Chưa có shop Pancake nào. Bấm "+ Thêm shop" để bắt đầu.
+      </div>`;
+    return;
   }
+  container.innerHTML = shops.map((s, idx) => `
+    <div style="padding: 12px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; background: var(--surface);">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+        <span style="background: var(--accent); color: var(--surface); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">SHOP ${idx + 1}</span>
+        <input type="text" value="${s.name || ''}" onchange="updatePancakeShopName('${s.id}', this.value)" placeholder="Tên shop" style="flex: 1; padding: 4px 8px; font-size: 13px; min-width: 100px;">
+        <button class="btn" onclick="syncSinglePancakeShop('${s.id}')" style="padding: 4px 10px; font-size: 12px;">🔄 Sync</button>
+        <button class="btn" onclick="removePancakeShop('${s.id}')" style="padding: 4px 10px; font-size: 12px; color: var(--red);">✕ Xóa</button>
+      </div>
+      <input type="text" value="${s.url || ''}" onchange="updatePancakeShopUrl('${s.id}', this.value)" placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv&gid=..." style="width: 100%; padding: 6px 10px; font-family: monospace; font-size: 11px;">
+      <div id="pancake-shop-status-${s.id}" style="margin-top: 6px; font-size: 11px; color: var(--text-muted);"></div>
+    </div>
+  `).join('');
+}
+
+// Add shop mới
+function addPancakeShop() {
+  if (!state.settings.pancakeSheets) state.settings.pancakeSheets = [];
+  const newId = 'shop_' + Date.now();
+  const idx = state.settings.pancakeSheets.length + 1;
+  state.settings.pancakeSheets.push({
+    id: newId,
+    name: 'Shop ' + idx,
+    url: ''
+  });
+  saveState();
+  renderPancakeShopsList();
+}
+
+// Update tên shop
+function updatePancakeShopName(shopId, name) {
+  const shop = state.settings.pancakeSheets.find(s => s.id === shopId);
+  if (shop) {
+    shop.name = name;
+    saveState();
+  }
+}
+
+// Update URL shop
+function updatePancakeShopUrl(shopId, url) {
+  const shop = state.settings.pancakeSheets.find(s => s.id === shopId);
+  if (shop) {
+    shop.url = url.trim();
+    saveState();
+  }
+}
+
+// Xóa shop
+function removePancakeShop(shopId) {
+  if (!confirm('Xóa shop này khỏi danh sách đồng bộ?')) return;
+  state.settings.pancakeSheets = state.settings.pancakeSheets.filter(s => s.id !== shopId);
+  saveState();
+  renderPancakeShopsList();
+}
+
+// Sync 1 shop riêng
+async function syncSinglePancakeShop(shopId, silent) {
+  const shop = state.settings.pancakeSheets.find(s => s.id === shopId);
+  if (!shop || !shop.url) {
+    if (!silent) showPancakeResult('error', 'Shop chưa có link CSV');
+    return null;
+  }
+  const statusEl = document.getElementById('pancake-shop-status-' + shopId);
+  if (statusEl) statusEl.innerHTML = '⏳ Đang tải...';
+  try {
+    const response = await fetch(shop.url);
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const csvText = await response.text();
+    if (csvText.trim().startsWith('<')) {
+      throw new Error('Sheet chưa public read');
+    }
+    const result = parsePancakeCSVForShop(csvText, shop.name);
+    if (statusEl) {
+      statusEl.innerHTML = `<span style="color: var(--green);">✓ ${result.total} đơn · ${result.inserted} mới · ${result.updated} cập nhật</span>`;
+    }
+    return result;
+  } catch (err) {
+    if (statusEl) {
+      statusEl.innerHTML = `<span style="color: var(--red);">✗ Lỗi: ${err.message}</span>`;
+    }
+    return null;
+  }
+}
+
+// Sync tất cả shop
+async function syncAllPancakeShops(silent) {
+  const shops = state.settings.pancakeSheets || [];
+  const validShops = shops.filter(s => s.url);
+  if (validShops.length === 0) {
+    if (!silent) showPancakeResult('error', 'Chưa có shop nào có link CSV. Bấm "+ Thêm shop" và nhập link.');
+    return;
+  }
+
+  if (!silent) showPancakeResult('info', `⏳ Đang đồng bộ ${validShops.length} shop...`);
+
+  const allResults = [];
+  // Lần đầu sync trong session — xóa data mẫu
+  const beforeCount = state.orders.length;
+  state.orders = state.orders.filter(o => !(o.id && o.id.startsWith('PO')));
+  const sampleRemoved = beforeCount - state.orders.length;
+
+  for (const shop of validShops) {
+    const r = await syncSinglePancakeShop(shop.id, silent);
+    if (r) allResults.push({ shop: shop.name, ...r });
+  }
+
+  if (allResults.length > 0) {
+    // Tổng hợp result
+    const summary = {
+      shops: allResults.length,
+      total: allResults.reduce((s, r) => s + r.total, 0),
+      inserted: allResults.reduce((s, r) => s + r.inserted, 0),
+      updated: allResults.reduce((s, r) => s + r.updated, 0),
+      unchanged: allResults.reduce((s, r) => s + r.unchanged, 0),
+      skipped: allResults.reduce((s, r) => s + r.skipped, 0),
+      sampleRemoved: sampleRemoved,
+      shopDetails: allResults
+    };
+    if (!silent) {
+      showPancakeResult('success-multi', summary);
+    }
+    // Update lastUpdate Pancake
+    state.lastUpdate.pancake = new Date().toISOString();
+    const parts = [];
+    parts.push(`${summary.shops} shop · ${summary.total} đơn`);
+    if (summary.inserted > 0) parts.push(`${summary.inserted} mới`);
+    if (summary.updated > 0) parts.push(`${summary.updated} cập nhật`);
+    state.lastUpdateSummary.pancake = parts.join(' · ');
+    saveState();
+    renderAll();
+
+    // Show toast for new orders (silent mode auto-sync)
+    if (silent && (summary.inserted > 0 || summary.updated > 0)) {
+      toast(`🔄 Pancake: ${summary.inserted} đơn mới, ${summary.updated} cập nhật`);
+    }
+  }
+  lastAutoSyncTime = new Date().toISOString();
+  updateNextSyncDisplay();
+}
+
+// Wrapper backward-compat: function cũ syncPancakeFromSheet → giờ sync all
+async function syncPancakeFromSheet(silent) {
+  return syncAllPancakeShops(silent);
+}
+
+// Parse CSV cho 1 shop (không clear data)
+function parsePancakeCSVForShop(csvText, shopName) {
+  if (!csvText || csvText.trim().length < 10) {
+    return { total: 0, inserted: 0, updated: 0, unchanged: 0, skipped: 0 };
+  }
+  const parsed = Papa.parse(csvText, {
+    header: true,
+    skipEmptyLines: true,
+    dynamicTyping: false
+  });
+  const rows = parsed.data;
+  if (rows.length === 0) {
+    return { total: 0, inserted: 0, updated: 0, unchanged: 0, skipped: 0 };
+  }
+  return applyPancakeData(rows, shopName);
 }
 
 // Auto-sync logic: chạy ngầm theo interval
