@@ -89,7 +89,7 @@
   .nav-section { font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-dim); padding: 16px 24px 8px; }
 
   /* Main */
-  .main { padding: 32px 40px; max-width: 100%; overflow-x: hidden; }
+  .main { padding: 32px 40px; max-width: 100%; }
   .page-header {
     display: flex;
     justify-content: space-between;
@@ -135,6 +135,35 @@
   .btn-ghost:hover { background: var(--surface-2); }
   .btn-danger { color: var(--red); border-color: transparent; }
   .btn-danger:hover { background: var(--red-soft); border-color: var(--red); }
+
+  /* Sticky filter bar (dashboard) */
+  .dashboard-sticky-filter {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--bg);
+    padding: 10px 0;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .filter-row-1 {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-pills-group {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  @media (max-width: 768px) {
+    .filter-row-1 { gap: 8px; }
+    .filter-pills-group { gap: 4px; }
+    .filter-pills-group .pill { padding: 4px 10px; font-size: 11px; }
+    .dashboard-sticky-filter .filter-pills-group:last-child { margin-left: 0 !important; width: 100%; }
+  }
 
   /* KPI Cards */
   .kpi-section-label {
@@ -664,30 +693,38 @@
             <div>📢 <strong style="color: var(--text);">Facebook Ads:</strong> <span id="last-update-fbads">—</span></div>
           </div>
         </div>
-        <div class="page-actions">
+      </div>
+
+      <!-- Sticky filter bar -->
+      <div class="dashboard-sticky-filter">
+        <div class="filter-row-1">
           <div class="date-range">
             <input type="date" id="date-from">
             <span style="color: var(--text-dim);">—</span>
             <input type="date" id="date-to">
           </div>
-          <button class="btn" onclick="refreshData()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-            Làm mới
-          </button>
+          <div class="filter-pills-group">
+            <button class="pill" data-preset="30days" onclick="setQuickDate('30days')">30 ngày</button>
+            <button class="pill" data-preset="thisMonth" onclick="setQuickDate('thisMonth')">Tháng này</button>
+            <button class="pill" data-preset="lastMonth" onclick="setQuickDate('lastMonth')">Tháng trước</button>
+            <button class="pill" data-preset="all" onclick="setQuickDate('all')">Tất cả</button>
+            <div style="position: relative; display: inline-block;">
+              <button class="pill" onclick="toggleMoreFilters(event)" id="more-filters-btn">⋯</button>
+              <div id="more-filters-dropdown" style="display: none; position: absolute; top: 100%; right: 0; margin-top: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px; z-index: 100; min-width: 140px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                <button class="pill" data-preset="today" onclick="setQuickDate('today')" style="display: block; width: 100%; text-align: left; margin-bottom: 4px;">Hôm nay</button>
+                <button class="pill" data-preset="yesterday" onclick="setQuickDate('yesterday')" style="display: block; width: 100%; text-align: left; margin-bottom: 4px;">Hôm qua</button>
+                <button class="pill" data-preset="7days" onclick="setQuickDate('7days')" style="display: block; width: 100%; text-align: left; margin-bottom: 4px;">7 ngày qua</button>
+                <button class="pill" data-preset="thisYear" onclick="setQuickDate('thisYear')" style="display: block; width: 100%; text-align: left;">Năm nay</button>
+              </div>
+            </div>
+          </div>
+          <div class="filter-pills-group" style="margin-left: auto;">
+            <span style="font-size: 11px; color: var(--text-muted);">Nguồn:</span>
+            <button class="pill active" data-source="all" onclick="setSourceFilter('all')">Tổng</button>
+            <button class="pill" data-source="pancake" onclick="setSourceFilter('pancake')">Pancake</button>
+            <button class="pill" data-source="vtp_only" onclick="setSourceFilter('vtp_only')">Đơn lạ</button>
+          </div>
         </div>
-      </div>
-
-      <!-- Quick date filter -->
-      <div class="quick-date-bar" style="display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;">
-        <span style="font-size: 12px; color: var(--text-muted); margin-right: 4px;">Lọc nhanh:</span>
-        <button class="pill" data-preset="today" onclick="setQuickDate('today')">Hôm nay</button>
-        <button class="pill" data-preset="yesterday" onclick="setQuickDate('yesterday')">Hôm qua</button>
-        <button class="pill" data-preset="7days" onclick="setQuickDate('7days')">7 ngày qua</button>
-        <button class="pill" data-preset="30days" onclick="setQuickDate('30days')">30 ngày qua</button>
-        <button class="pill" data-preset="thisMonth" onclick="setQuickDate('thisMonth')">Tháng này</button>
-        <button class="pill" data-preset="lastMonth" onclick="setQuickDate('lastMonth')">Tháng trước</button>
-        <button class="pill" data-preset="thisYear" onclick="setQuickDate('thisYear')">Năm nay</button>
-        <button class="pill" data-preset="all" onclick="setQuickDate('all')">Tất cả</button>
       </div>
 
       <!-- KPIs - Tài chính -->
@@ -777,19 +814,6 @@
           <div class="kpi-label">⚠ TC nhưng COD = 0</div>
           <div class="kpi-value" id="kpi-orders-anomaly">—</div>
           <div class="kpi-sub">Bấm để xem chi tiết</div>
-        </div>
-      </div>
-
-      <!-- Charts -->
-      <div style="margin-bottom: 20px;">
-        <div class="card">
-          <div class="card-header">
-            <div>
-              <div class="card-title">Doanh thu theo ngày</div>
-              <div class="card-subtitle">So sánh Pancake (tạo) và thực tế (đã giao)</div>
-            </div>
-          </div>
-          <div class="chart-wrap"><canvas id="chart-revenue"></canvas></div>
         </div>
       </div>
 
@@ -968,7 +992,7 @@
                 <th colspan="3" style="text-align: center; background: rgba(232,184,74,0.08);">Hiệu quả</th>
               </tr>
               <tr>
-                <th class="num" style="border-left: 1px solid var(--border);">Tạo</th>
+                <th class="num" style="border-left: 1px solid var(--border);">Tạo (Pancake)</th>
                 <th class="num">Đã bắn VTP</th>
                 <th class="num">Đang giao</th>
                 <th class="num">Thành công</th>
@@ -1000,6 +1024,26 @@
           <div class="page-title">Chi tiết đơn hàng</div>
           <div class="page-subtitle">Đối soát từng đơn giữa Pancake và Viettel Post</div>
         </div>
+        <div class="page-actions">
+          <div class="date-range">
+            <input type="date" id="date-from-orders">
+            <span style="color: var(--text-dim);">—</span>
+            <input type="date" id="date-to-orders">
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick date filter -->
+      <div class="quick-date-bar" style="display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;">
+        <span style="font-size: 12px; color: var(--text-muted); margin-right: 4px;">Lọc nhanh:</span>
+        <button class="pill" data-preset="today" onclick="setQuickDate('today')">Hôm nay</button>
+        <button class="pill" data-preset="yesterday" onclick="setQuickDate('yesterday')">Hôm qua</button>
+        <button class="pill" data-preset="7days" onclick="setQuickDate('7days')">7 ngày qua</button>
+        <button class="pill" data-preset="30days" onclick="setQuickDate('30days')">30 ngày qua</button>
+        <button class="pill" data-preset="thisMonth" onclick="setQuickDate('thisMonth')">Tháng này</button>
+        <button class="pill" data-preset="lastMonth" onclick="setQuickDate('lastMonth')">Tháng trước</button>
+        <button class="pill" data-preset="thisYear" onclick="setQuickDate('thisYear')">Năm nay</button>
+        <button class="pill" data-preset="all" onclick="setQuickDate('all')">Tất cả</button>
       </div>
 
       <div class="filter-bar">
@@ -1141,13 +1185,11 @@
         <div class="card-header">
           <div>
             <div class="card-title">Thao tác nhanh</div>
-            <div class="card-subtitle">Reset hoặc tái tạo dữ liệu mẫu</div>
+            <div class="card-subtitle">Xóa toàn bộ dữ liệu app (KHÔNG hoàn tác được)</div>
           </div>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          <button class="btn btn-primary" onclick="generateSampleData()">Tạo dữ liệu mẫu 14 ngày</button>
-          <button class="btn" onclick="refreshData()">Giả lập đồng bộ (làm mới)</button>
-          <button class="btn btn-danger" onclick="resetAll()">Xóa tất cả dữ liệu</button>
+          <button class="btn btn-danger" onclick="resetAll()">⚠ Xóa tất cả dữ liệu</button>
         </div>
       </div>
     </div>
@@ -1158,12 +1200,6 @@
         <div>
           <div class="page-title">Sản phẩm & giá vốn</div>
           <div class="page-subtitle">Đồng bộ tự động từ Pancake · Tổng <span id="product-count">0</span> sản phẩm</div>
-        </div>
-        <div class="page-actions">
-          <button class="btn" onclick="refreshData()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-            Đồng bộ từ Pancake
-          </button>
         </div>
       </div>
 
@@ -1912,6 +1948,7 @@ const state = {
   dateFrom: null,
   dateTo: null,
   orderFilter: 'all',
+  sourceFilter: 'all',  // 'all' | 'pancake' | 'vtp_only'
   orderPage: 1,
   orderPageSize: 200,
   quickDatePreset: 'all',
@@ -2009,20 +2046,7 @@ async function loadState() {
     if (st) state.settings = Object.assign(state.settings, JSON.parse(st));
   } catch(e) {}
 
-  // Chỉ tự tạo mẫu nếu app hoàn toàn mới (chưa từng dùng)
-  // Sau khi user xóa data, không tự tạo lại
-  const hasInitFlag = localStorage.getItem('doi-soat-initialized');
-  if (state.products.length === 0 && state.orders.length === 0 && !hasInitFlag) {
-    generateSampleData(true);
-    // Tạo cả fixed costs mẫu CHỈ TRONG LẦN ĐẦU
-    state.fixedCosts = [
-      { id: 'fc1', name: 'Thuê kho', amount: 3000000, cycle: 'monthly', note: 'Kho 30m² quận 7' },
-      { id: 'fc2', name: 'Lương nhân viên đóng gói', amount: 5000000, cycle: 'monthly', note: '1 nhân viên full-time' },
-      { id: 'fc3', name: 'Điện nước', amount: 500000, cycle: 'monthly', note: '' },
-      { id: 'fc4', name: 'Bao bì đóng gói', amount: 800000, cycle: 'monthly', note: 'Hộp, băng keo, túi' },
-    ];
-    try { localStorage.setItem('doi-soat-initialized', '1'); } catch(e) {}
-  }
+  // KHÔNG tự tạo data mẫu — app khởi động trống và chờ user sync
 }
 
 async function saveState() {
@@ -2202,54 +2226,200 @@ function generateSampleData(silent) {
 // ============================================================================
 // CALCULATIONS
 // ============================================================================
+// ============================================================================
+// HELPER FUNCTIONS — DÙNG CHUNG CHO MỌI BẢNG/TRANG (đảm bảo logic đồng nhất)
+// ============================================================================
+
+// Phân loại nguồn đơn
+function isPancakeOrder(o) {
+  return !o.source || o.source === 'pancake' || o.source === 'pancake+vtp';
+}
+function isVtpOnlyOrder(o) {
+  return o.source === 'vtp_only';
+}
+
+// Đơn đã bắn VTP = đơn Pancake + có vtpTracking
+function isSentToVtp(o) {
+  return isPancakeOrder(o) && !!o.vtpTracking && o.vtpTracking !== '';
+}
+
+// Tính giá vốn của 1 đơn theo logic đồng nhất
+function getOrderCOGS(o) {
+  if (o.status === 'success') {
+    return o.items.reduce((s, it) => s + (it.unitCost || 0) * (it.qty || 0), 0);
+  }
+  if (o.status === 'partial') {
+    // Đơn 1 phần với DT VTP < 50k → khách KHÔNG nhận hàng → giá vốn = 0
+    if ((o.actualRevenue || 0) < 50000) return 0;
+    // Còn lại: giá vốn shop nhập tay; nếu chưa nhập → tạm tính 50%
+    const fullCogs = o.items.reduce((s, it) => s + (it.unitCost || 0) * (it.qty || 0), 0);
+    if (state.partialCogs && state.partialCogs[o.id] !== undefined && state.partialCogs[o.id] !== null && state.partialCogs[o.id] !== '') {
+      return Number(state.partialCogs[o.id]);
+    }
+    return Math.round(fullCogs * 0.5);
+  }
+  return 0; // returned/failed/cancelled/shipping/sent/pending → không tính giá vốn
+}
+
+// Tính phí ship của 1 đơn theo logic đồng nhất
+function getOrderShipFee(o) {
+  // Đơn hủy → không có phí ship (VTP chưa lấy hàng)
+  if (o.status === 'cancelled') return 0;
+  return o.shipFee || 0;
+}
+
+// Tính phí hoàn của 1 đơn (chỉ áp cho đơn 1 phần và đơn hoàn)
+function getOrderReturnFee(o) {
+  if (o.status === 'partial') {
+    // Phí 1P1 lấy từ data VTP đã parse
+    return o.returnFee || 0;
+  }
+  if (o.status === 'returned' || o.status === 'failed') {
+    // Phí hoàn KTC mặc định = settings.defaultReturnFee
+    return (state.settings && state.settings.defaultReturnFee) || 5000;
+  }
+  return 0;
+}
+
+// Tính doanh thu thực tế của 1 đơn (từ VTP, không tính đơn đang giao/hủy/hoàn)
+function getOrderActualRevenue(o) {
+  if (o.status === 'success' || o.status === 'partial') {
+    return o.actualRevenue || 0;
+  }
+  return 0;
+}
+
+// Lợi nhuận đơn
+function getOrderProfit(o) {
+  if (o.status === 'cancelled') return 0;
+  return getOrderActualRevenue(o) - getOrderCOGS(o) - getOrderShipFee(o) - getOrderReturnFee(o);
+}
+
+// Áp date filter cho 1 đơn
+function isInDateRange(o) {
+  if (state.dateFrom && o.date < state.dateFrom) return false;
+  if (state.dateTo && o.date > state.dateTo) return false;
+  return true;
+}
+
+// Áp source filter (cho dashboard)
+function matchSourceFilter(o) {
+  const f = state.sourceFilter || 'all';
+  if (f === 'all') return true;
+  if (f === 'pancake') return isPancakeOrder(o);
+  if (f === 'vtp_only') return isVtpOnlyOrder(o);
+  return true;
+}
+
+// Filter chính: áp date + source
+function applyMainFilters(orders) {
+  return orders.filter(o => isInDateRange(o) && matchSourceFilter(o));
+}
+
+// Tính tổng KPI từ 1 mảng đơn — DÙNG CHUNG ở mọi bảng
+function calcKPIsFromOrders(orders) {
+  const k = {
+    totalOrders: orders.length,
+    pancakeOrderCount: 0,        // Đơn Pancake
+    vtpOnlyCount: 0,             // Đơn lạ (chỉ ở VTP)
+    sentCount: 0,                // Đã bắn VTP
+    notSentCount: 0,             // Pancake chưa bắn
+    pendingCount: 0,             // status = pending
+    sentStatusCount: 0,          // status = sent (đã bắn nhưng VTP chưa lấy)
+    shippingCount: 0,            // status = shipping (đang giao)
+    successCount: 0,             // status = success
+    partialCount: 0,             // status = partial
+    returnedCount: 0,            // status = returned + failed
+    cancelledCount: 0,           // status = cancelled
+    pancakeRevenue: 0,           // DT Pancake (chỉ từ đơn Pancake)
+    actualRevenue: 0,            // DT thực tế từ VTP (success + partial)
+    cogs: 0,                     // Giá vốn
+    shipFee: 0,                  // Phí ship (không tính cancelled)
+    returnFeePartial: 0,         // Phí hoàn 1 phần (1P1)
+    returnFeeKTC: 0,             // Phí hoàn KTC
+    profit: 0
+  };
+
+  orders.forEach(o => {
+    if (isPancakeOrder(o)) {
+      k.pancakeOrderCount++;
+      k.pancakeRevenue += o.pancakeRevenue || 0;
+      if (isSentToVtp(o)) k.sentCount++;
+      else k.notSentCount++;
+    }
+    if (isVtpOnlyOrder(o)) k.vtpOnlyCount++;
+
+    // Đếm theo status
+    if (o.status === 'pending') k.pendingCount++;
+    else if (o.status === 'sent') k.sentStatusCount++;
+    else if (o.status === 'shipping') k.shippingCount++;
+    else if (o.status === 'success') k.successCount++;
+    else if (o.status === 'partial') k.partialCount++;
+    else if (o.status === 'returned' || o.status === 'failed') k.returnedCount++;
+    else if (o.status === 'cancelled') k.cancelledCount++;
+
+    // Tài chính
+    k.actualRevenue += getOrderActualRevenue(o);
+    k.cogs += getOrderCOGS(o);
+    k.shipFee += getOrderShipFee(o);
+    if (o.status === 'partial') k.returnFeePartial += getOrderReturnFee(o);
+    else if (o.status === 'returned' || o.status === 'failed') k.returnFeeKTC += getOrderReturnFee(o);
+    k.profit += getOrderProfit(o);
+  });
+
+  return k;
+}
+
+// ============================================================================
+// AGGREGATE
+// ============================================================================
+
 function aggregateByDay() {
   const days = {};
-  state.orders.forEach(o => {
+  // Áp filter chính (date + source)
+  const filtered = applyMainFilters(state.orders);
+  filtered.forEach(o => {
     if (!days[o.date]) {
       days[o.date] = {
-        date: o.date, orders: 0, sentCount: 0, pancakeRevenue: 0, successCount: 0,
-        returnedCount: 0, failedCount: 0, cancelledCount: 0, partialCount: 0, shippingCount: 0,
-        returnLikeCount: 0,
-        actualRevenue: 0, cogs: 0, shipFee: 0, returnFee: 0
+        date: o.date,
+        orders: 0, pancakeOrderCount: 0, sentCount: 0, shippingCount: 0,
+        successCount: 0, returnedCount: 0, failedCount: 0, cancelledCount: 0,
+        partialCount: 0, returnLikeCount: 0,
+        pancakeRevenue: 0, actualRevenue: 0, cogs: 0, shipFee: 0, returnFee: 0
       };
     }
     const d = days[o.date];
     d.orders++;
-    if (o.sentToVtp) d.sentCount++;
-    d.pancakeRevenue += o.pancakeRevenue;
-    // Doanh thu thực tế: CHỈ tính từ đơn success/partial (không tính đơn hủy/hoàn/đang giao)
-    if (o.status === 'success' || o.status === 'partial') {
-      d.actualRevenue += o.actualRevenue;
+    if (isPancakeOrder(o)) {
+      d.pancakeOrderCount++;
+      d.pancakeRevenue += o.pancakeRevenue || 0;
     }
-    // Phí ship: KHÔNG tính cho đơn hủy (shop hủy lấy / VTP hủy lấy = chưa giao đi)
-    if (o.status !== 'cancelled') {
-      d.shipFee += o.shipFee;
-      d.returnFee += o.returnFee || 0;
+    if (isSentToVtp(o)) d.sentCount++;
+    if (o.status === 'shipping') d.shippingCount++;
+
+    d.actualRevenue += getOrderActualRevenue(o);
+    d.shipFee += getOrderShipFee(o);
+    d.cogs += getOrderCOGS(o);
+
+    if (o.status === 'success') d.successCount++;
+    else if (o.status === 'partial') {
+      d.partialCount++; d.returnLikeCount++;
+      d.returnFee += getOrderReturnFee(o);
     }
-    if (o.status === 'success') {
-      d.successCount++;
-      d.cogs += o.items.reduce((s,it) => s + it.unitCost * it.qty, 0);
-    } else if (o.status === 'partial') {
-      d.partialCount++;
-      d.returnLikeCount++;
-      // Giá vốn đơn 1 phần = SHOP NHẬP TAY (lưu trong partialCogs)
-      // Nếu chưa nhập → tạm tính 50% để vẫn có số tổng kê
-      const fullCogs = o.items.reduce((s,it) => s + it.unitCost * it.qty, 0);
-      const cogsForThisOrder = (state.partialCogs[o.id] !== undefined && state.partialCogs[o.id] !== null && state.partialCogs[o.id] !== '')
-        ? Number(state.partialCogs[o.id])
-        : Math.round(fullCogs * 0.5);
-      d.cogs += cogsForThisOrder;
-    } else if (o.status === 'returned') { d.returnedCount++; d.returnLikeCount++; }
-    else if (o.status === 'failed') { d.failedCount++; d.returnLikeCount++; }
+    else if (o.status === 'returned') {
+      d.returnedCount++; d.returnLikeCount++;
+      d.returnFee += getOrderReturnFee(o);
+    }
+    else if (o.status === 'failed') {
+      d.failedCount++; d.returnLikeCount++;
+      d.returnFee += getOrderReturnFee(o);
+    }
     else if (o.status === 'cancelled') d.cancelledCount++;
-    else if (o.status === 'shipping') d.shippingCount++;
-    // 'sent' status = đã bắn nhưng chưa có kết quả, không đếm vào các mục trên
   });
 
   const adsMap = {};
   state.ads.forEach(a => { adsMap[a.date] = a; });
 
-  // Calculate daily fixed cost allocation
   const dailyFixedCost = Math.round(state.fixedCosts.reduce((s, fc) => {
     if (fc.cycle === 'monthly') return s + fc.amount / 30;
     if (fc.cycle === 'yearly') return s + fc.amount / 365;
@@ -2274,12 +2444,8 @@ function aggregateByDay() {
 }
 
 function filterByDate(rows) {
-  if (!state.dateFrom && !state.dateTo) return rows;
-  return rows.filter(r => {
-    if (state.dateFrom && r.date < state.dateFrom) return false;
-    if (state.dateTo && r.date > state.dateTo) return false;
-    return true;
-  });
+  // Date filter đã áp ở applyMainFilters → chỉ pass-through
+  return rows;
 }
 
 // ============================================================================
@@ -2321,160 +2487,125 @@ function renderDashboard() {
   setUpdateInfo('last-update-vtp', lu.vtp, ls.vtp);
   setUpdateInfo('last-update-fbads', lu.fbAds, ls.fbAds);
 
-  const rows = filterByDate(aggregateByDay());
-  const totals = rows.reduce((acc, r) => {
-    acc.orders += r.orders;
-    acc.sentCount += r.sentCount;
-    acc.pancakeRevenue += r.pancakeRevenue;
-    acc.successCount += r.successCount;
-    acc.returnLikeCount += r.returnLikeCount;
-    acc.shippingCount += r.shippingCount;
-    acc.cancelledCount += r.cancelledCount;
-    acc.actualRevenue += r.actualRevenue;
-    acc.adsCost += r.adsCost;
-    acc.cogs += r.cogs;
-    acc.shipFee += r.shipFee;
-    acc.returnFee += r.returnFee;
-    acc.fixedCost += r.fixedCost;
-    return acc;
-  }, { orders: 0, sentCount: 0, pancakeRevenue: 0, successCount: 0, returnLikeCount: 0, shippingCount: 0, cancelledCount: 0, actualRevenue: 0, adsCost: 0, cogs: 0, shipFee: 0, returnFee: 0, fixedCost: 0 });
-  const totalCost = totals.adsCost + totals.cogs + totals.shipFee + totals.returnFee + totals.fixedCost;
-  const profit = totals.actualRevenue - totalCost;
-  const grossProfit = totals.actualRevenue - totals.adsCost - totals.cogs - totals.shipFee - totals.returnFee;
-  const margin = totals.actualRevenue > 0 ? (profit / totals.actualRevenue) * 100 : 0;
-  const sentRate = totals.orders > 0 ? (totals.sentCount / totals.orders) * 100 : 0;
-  const roas = totals.adsCost > 0 ? totals.actualRevenue / totals.adsCost : 0;
+  // ============================================================================
+  // TÍNH KPI DÙNG HELPER ĐỒNG NHẤT
+  // ============================================================================
+  // Áp date + source filter
+  const filteredOrders = applyMainFilters(state.orders);
+  // Helper: đơn Pancake CHỈ lấy đơn nguồn pancake
+  const pancakeFiltered = filteredOrders.filter(o => isPancakeOrder(o));
 
-  // Tính riêng các metrics từ đơn THEO NGUỒN
-  // Đơn có ở Pancake = source 'pancake' hoặc 'pancake+vtp'
-  const isPancakeOrder = (o) => {
-    if (state.dateFrom && o.date < state.dateFrom) return false;
-    if (state.dateTo && o.date > state.dateTo) return false;
-    return !o.source || o.source === 'pancake' || o.source === 'pancake+vtp';
-  };
-  const pancakeOrders = state.orders.filter(isPancakeOrder);
-  const pancakeOrderCount = pancakeOrders.length;
-  const pancakeRevenueSum = pancakeOrders.reduce((s, o) => s + (o.pancakeRevenue || 0), 0);
-  // Đã bắn VTP = đơn Pancake có vtpTracking (KHÔNG dùng flag sentToVtp vì Pancake parser không set)
-  const pancakeSentCount = pancakeOrders.filter(o => o.vtpTracking && o.vtpTracking !== '').length;
-  const pancakeSuccessCount = pancakeOrders.filter(o => o.status === 'success').length;
-  const pancakeReturnCount = pancakeOrders.filter(o => o.status === 'returned' || o.status === 'failed' || o.status === 'partial').length;
-  const pancakeCancelCount = pancakeOrders.filter(o => o.status === 'cancelled').length;
-  const pancakeShippingCount = pancakeOrders.filter(o => o.status === 'shipping').length;
-  const pancakeSentRate = pancakeOrderCount > 0 ? (pancakeSentCount / pancakeOrderCount) * 100 : 0;
-  const pancakeSuccessRate = pancakeOrderCount > 0 ? (pancakeSuccessCount / pancakeOrderCount) * 100 : 0;
+  const k = calcKPIsFromOrders(filteredOrders);
+  const kPancake = calcKPIsFromOrders(pancakeFiltered);
 
-  // Helper hiển thị: "—" nếu không có data
+  // Aggregate cho ads/fixed cost
+  const adsByDate = {};
+  state.ads.forEach(a => { adsByDate[a.date] = (adsByDate[a.date] || 0) + a.cost; });
+  let totalAdsCost = 0;
+  Object.keys(adsByDate).forEach(d => {
+    if (state.dateFrom && d < state.dateFrom) return;
+    if (state.dateTo && d > state.dateTo) return;
+    totalAdsCost += adsByDate[d];
+  });
+
+  // Fixed cost theo số ngày trong khoảng date
+  let totalFixedCost = 0;
+  if (filteredOrders.length > 0) {
+    const dailyFixedCost = state.fixedCosts.reduce((s, fc) => {
+      if (fc.cycle === 'monthly') return s + fc.amount / 30;
+      if (fc.cycle === 'yearly') return s + fc.amount / 365;
+      if (fc.cycle === 'daily') return s + fc.amount;
+      return s;
+    }, 0);
+    const dates = new Set(filteredOrders.map(o => o.date));
+    totalFixedCost = Math.round(dailyFixedCost * dates.size);
+  }
+
+  const totalCost = totalAdsCost + k.cogs + k.shipFee + k.returnFeePartial + k.returnFeeKTC + totalFixedCost;
+  const profit = k.actualRevenue - totalCost;
+  const grossProfit = k.actualRevenue - totalAdsCost - k.cogs - k.shipFee - k.returnFeePartial - k.returnFeeKTC;
+  const margin = k.actualRevenue > 0 ? (profit / k.actualRevenue) * 100 : 0;
+  const roas = totalAdsCost > 0 ? k.actualRevenue / totalAdsCost : 0;
+
+  // Helper hiển thị
   const fmtOrEmpty = (val, hasData) => hasData ? fmtShort(val) : '—';
   const fmtNumOrEmpty = (val, hasData) => hasData ? val.toLocaleString('vi-VN') : '—';
   const fmtPctOrEmpty = (val, hasData) => hasData ? fmtPct(val) : '—';
-  const hasPancake = pancakeOrderCount > 0;
-  const hasAds = totals.adsCost > 0;
-  const hasShipping = totals.shipFee > 0 || totals.returnFee > 0;
 
-  // Financial KPIs
-  document.getElementById('kpi-revenue-total').textContent = fmtOrEmpty(pancakeRevenueSum, hasPancake);
-  document.getElementById('kpi-revenue-actual').textContent = fmtOrEmpty(totals.actualRevenue, totals.actualRevenue > 0 || totals.orders > 0);
-  document.getElementById('kpi-ads').textContent = fmtOrEmpty(totals.adsCost, hasAds);
+  const hasPancake = kPancake.pancakeOrderCount > 0;
+  const hasAds = totalAdsCost > 0;
+  const hasShipping = k.shipFee > 0 || k.returnFeePartial > 0 || k.returnFeeKTC > 0;
+  const hasOrders = filteredOrders.length > 0;
+
+  // ===== TÀI CHÍNH =====
+  // DT Pancake: nếu source filter = vtp_only → 0 (không có DT Pancake cho VTP_only)
+  document.getElementById('kpi-revenue-total').textContent = fmtOrEmpty(kPancake.pancakeRevenue, hasPancake);
+  document.getElementById('kpi-revenue-actual').textContent = fmtOrEmpty(k.actualRevenue, k.actualRevenue > 0 || hasOrders);
+  document.getElementById('kpi-ads').textContent = fmtOrEmpty(totalAdsCost, hasAds);
   document.getElementById('kpi-roas').textContent = hasAds ? roas.toFixed(2) + 'x' : '—';
-  // Chi phí vận chuyển (mới)
   const elShip = document.getElementById('kpi-shipping-cost');
-  if (elShip) elShip.textContent = fmtOrEmpty(totals.shipFee + totals.returnFee, hasShipping);
+  if (elShip) elShip.textContent = fmtOrEmpty(k.shipFee + k.returnFeePartial + k.returnFeeKTC, hasShipping);
   document.getElementById('kpi-cost-total').textContent = fmtOrEmpty(totalCost, totalCost > 0);
-  document.getElementById('kpi-profit').textContent = fmtOrEmpty(profit, totals.actualRevenue > 0 || totalCost > 0);
+  document.getElementById('kpi-profit').textContent = fmtOrEmpty(profit, k.actualRevenue > 0 || totalCost > 0);
   const profitEl = document.getElementById('kpi-profit');
   profitEl.className = 'kpi-value ' + (profit >= 0 ? 'pos' : 'neg');
-  document.getElementById('kpi-margin').textContent = fmtPctOrEmpty(margin, totals.actualRevenue > 0);
+  document.getElementById('kpi-margin').textContent = fmtPctOrEmpty(margin, k.actualRevenue > 0);
 
-  // Fixed cost KPI (if element exists)
   const elFixed = document.getElementById('kpi-fixed-cost');
-  if (elFixed) elFixed.textContent = fmtOrEmpty(totals.fixedCost, state.fixedCosts.length > 0);
+  if (elFixed) elFixed.textContent = fmtOrEmpty(totalFixedCost, state.fixedCosts.length > 0);
   const elGross = document.getElementById('kpi-gross-profit');
   if (elGross) {
-    elGross.textContent = fmtOrEmpty(grossProfit, totals.actualRevenue > 0 || totals.adsCost > 0);
+    elGross.textContent = fmtOrEmpty(grossProfit, k.actualRevenue > 0 || totalAdsCost > 0);
     elGross.className = 'kpi-value ' + (grossProfit >= 0 ? 'pos' : 'neg');
   }
 
-  // ====== ORDER COUNT KPIs — logic chuẩn theo nghiệp vụ VTP ======
-  // Đơn Pancake: là cái shop tạo
-  // Đã bắn VTP: đơn Pancake có vtpTracking
-  // Đơn gửi VTP (success/partial/returned/failed) → chia theo status thật
-  //
-  // Đếm theo phạm vi date filter:
-  const inDate = (o) => {
-    if (state.dateFrom && o.date < state.dateFrom) return false;
-    if (state.dateTo && o.date > state.dateTo) return false;
-    return true;
-  };
-  // Tất cả đơn (Pancake + VTP_only) trong khoảng ngày
-  const allFilteredOrders = state.orders.filter(inDate);
-  // Đếm theo status app (đã đánh dấu partial nếu có 1P1)
-  const cntSuccess = allFilteredOrders.filter(o => o.status === 'success').length;
-  const cntPartial = allFilteredOrders.filter(o => o.status === 'partial').length;
-  const cntReturned = allFilteredOrders.filter(o => o.status === 'returned' || o.status === 'failed').length;
-  const cntCancelled = allFilteredOrders.filter(o => o.status === 'cancelled').length;
-  // CHỈ shipping thật (VTP đã lấy hàng) — KHÔNG tính 'sent' (đã bắn nhưng VTP chưa lấy)
-  const cntShipping = allFilteredOrders.filter(o => o.status === 'shipping').length;
-
-  // Tổng đơn gửi VTP = đã có kết quả giao (TC thực tế + 1 phần + hoàn)
-  const totalVtpDelivered = cntSuccess + cntPartial + cntReturned;
-
-  // Tỉ lệ giao TC = TC thực tế / tổng đơn VTP đã có kết quả
-  const successRateVtp = totalVtpDelivered > 0 ? (cntSuccess / totalVtpDelivered) * 100 : 0;
-  // Tỉ lệ hoàn = (1 phần + hoàn) / tổng đơn VTP đã có kết quả
-  const returnRateVtp = totalVtpDelivered > 0 ? ((cntPartial + cntReturned) / totalVtpDelivered) * 100 : 0;
-
-  const hasOrders = allFilteredOrders.length > 0;
-  const hasDelivered = totalVtpDelivered > 0;
-
-  // Tổng đơn Pancake: chỉ đếm đơn có ở Pancake
-  document.getElementById('kpi-orders-total').textContent = fmtNumOrEmpty(pancakeOrderCount, hasPancake);
-  // Đã bắn VTP: đơn Pancake có vtpTracking
-  document.getElementById('kpi-orders-sent').textContent = fmtNumOrEmpty(pancakeSentCount, hasPancake);
-  document.getElementById('kpi-sent-rate').textContent = fmtPctOrEmpty(pancakeSentRate, hasPancake);
+  // ===== ĐƠN HÀNG =====
+  // Tổng đơn Pancake
+  document.getElementById('kpi-orders-total').textContent = fmtNumOrEmpty(kPancake.pancakeOrderCount, hasPancake);
+  // Đã bắn VTP
+  document.getElementById('kpi-orders-sent').textContent = fmtNumOrEmpty(kPancake.sentCount, hasPancake);
+  const sentRate = kPancake.pancakeOrderCount > 0 ? (kPancake.sentCount / kPancake.pancakeOrderCount) * 100 : 0;
+  document.getElementById('kpi-sent-rate').textContent = fmtPctOrEmpty(sentRate, hasPancake);
   // Đang giao
-  document.getElementById('kpi-orders-shipping').textContent = fmtNumOrEmpty(cntShipping, hasOrders);
-  // Giao TC thực tế (KHÔNG bao gồm partial)
-  document.getElementById('kpi-orders-success').textContent = fmtNumOrEmpty(cntSuccess, hasOrders);
-  // Giao 1 phần (KPI riêng)
+  document.getElementById('kpi-orders-shipping').textContent = fmtNumOrEmpty(k.shippingCount, hasOrders);
+  // Giao TC thực tế
+  document.getElementById('kpi-orders-success').textContent = fmtNumOrEmpty(k.successCount, hasOrders);
+  // Giao 1 phần
   const partialEl = document.getElementById('kpi-orders-partial');
-  if (partialEl) partialEl.textContent = fmtNumOrEmpty(cntPartial, hasOrders);
-  // Hoàn (KTC) — chỉ tính returned + failed (KHÔNG tính partial vì đã có KPI riêng)
-  document.getElementById('kpi-orders-returned').textContent = fmtNumOrEmpty(cntReturned, hasOrders);
+  if (partialEl) partialEl.textContent = fmtNumOrEmpty(k.partialCount, hasOrders);
+  // Hoàn KTC
+  document.getElementById('kpi-orders-returned').textContent = fmtNumOrEmpty(k.returnedCount, hasOrders);
   // Đơn hủy
-  document.getElementById('kpi-orders-cancelled').textContent = fmtNumOrEmpty(cntCancelled, hasOrders);
-  // Tỉ lệ TC big
+  document.getElementById('kpi-orders-cancelled').textContent = fmtNumOrEmpty(k.cancelledCount, hasOrders);
+
+  // Tỉ lệ TC / hoàn
+  const totalVtpDelivered = k.successCount + k.partialCount + k.returnedCount;
+  const successRateVtp = totalVtpDelivered > 0 ? (k.successCount / totalVtpDelivered) * 100 : 0;
+  const returnRateVtp = totalVtpDelivered > 0 ? ((k.partialCount + k.returnedCount) / totalVtpDelivered) * 100 : 0;
+  const hasDelivered = totalVtpDelivered > 0;
   const successBigEl = document.getElementById('kpi-success-rate-big');
   if (successBigEl) successBigEl.textContent = fmtPctOrEmpty(successRateVtp, hasDelivered);
-  // Tỉ lệ hoàn big
   const returnBigEl = document.getElementById('kpi-return-rate-big');
   if (returnBigEl) returnBigEl.textContent = fmtPctOrEmpty(returnRateVtp, hasDelivered);
-  document.getElementById('kpi-orders-cancelled').textContent = totals.cancelledCount.toLocaleString('vi-VN');
 
   // KPI: Đơn TC nhưng COD = 0 (anomaly)
-  const anomalyCount = state.orders.filter(o => {
-    if (o.status !== 'success') return false;
-    if (state.dateFrom && o.date < state.dateFrom) return false;
-    if (state.dateTo && o.date > state.dateTo) return false;
-    return o.actualRevenue === 0;
-  }).length;
+  const anomalyCount = filteredOrders.filter(o => o.status === 'success' && (o.actualRevenue || 0) === 0).length;
   const anomalyEl = document.getElementById('kpi-orders-anomaly');
   if (anomalyEl) anomalyEl.textContent = anomalyCount.toLocaleString('vi-VN');
 
-  // Revenue chart
-  const ctx1 = document.getElementById('chart-revenue');
-  if (charts.revenue) charts.revenue.destroy();
-  charts.revenue = new Chart(ctx1, {
-    type: 'line',
-    data: {
-      labels: rows.map(r => fmtDate(r.date)),
-      datasets: [
-        { label: 'DT Pancake', data: rows.map(r => r.pancakeRevenue), borderColor: '#6FA8DC', backgroundColor: 'rgba(111,168,220,0.1)', fill: true, tension: 0.3, borderWidth: 2 },
-        { label: 'DT thực tế', data: rows.map(r => r.actualRevenue), borderColor: '#7FB069', backgroundColor: 'rgba(127,176,105,0.1)', fill: true, tension: 0.3, borderWidth: 2 }
-      ]
-    },
-    options: chartOpts()
-  });
+  // Variables for sections below — reassign to k for backward compat
+  const cntSuccess = k.successCount;
+  const cntPartial = k.partialCount;
+  const cntReturned = k.returnedCount;
+  const allFilteredOrders = filteredOrders;
+  const totals = {
+    actualRevenue: k.actualRevenue,
+    adsCost: totalAdsCost,
+    cogs: k.cogs,
+    shipFee: k.shipFee,
+    returnFee: k.returnFeePartial + k.returnFeeKTC,
+    fixedCost: totalFixedCost
+  };
 
   // ===== BẢNG TỈ LỆ GIAO HÀNG =====
   const setText2 = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
@@ -2548,13 +2679,6 @@ function renderDashboard() {
   setText2('cost-fixed-pct', pctOf(fixedCostSum));
   setText2('cost-total-bottom', fmtOr(totalCostSum));
   setText2('cost-total-pct', pctOf(totalCostSum));
-
-  if (rows.length > 0) {
-    const dateLabel = document.getElementById('date-range-label');
-    if (dateLabel) {
-      dateLabel.textContent = fmtDate(rows[0].date) + ' → ' + fmtDate(rows[rows.length-1].date);
-    }
-  }
 }
 
 function chartOpts() {
@@ -2579,6 +2703,7 @@ function renderDaily() {
   // Calculate totals
   const t = rows.reduce((acc, r) => {
     acc.orders += r.orders;
+    acc.pancakeOrderCount += (r.pancakeOrderCount || 0);
     acc.sentCount += r.sentCount;
     acc.shippingCount += r.shippingCount;
     acc.successCount += r.successCount;
@@ -2594,14 +2719,14 @@ function renderDaily() {
     acc.fixedCost += r.fixedCost;
     acc.profit += r.profit;
     return acc;
-  }, { orders:0, sentCount:0, shippingCount:0, successCount:0, returnedPlusFailed:0, partialCount:0, cancelledCount:0, pancakeRevenue:0, actualRevenue:0, adsCost:0, cogs:0, shipFee:0, returnFee:0, fixedCost:0, profit:0 });
+  }, { orders:0, pancakeOrderCount:0, sentCount:0, shippingCount:0, successCount:0, returnedPlusFailed:0, partialCount:0, cancelledCount:0, pancakeRevenue:0, actualRevenue:0, adsCost:0, cogs:0, shipFee:0, returnFee:0, fixedCost:0, profit:0 });
   const totalSuccessRate = t.orders > 0 ? (t.successCount / t.orders) * 100 : 0;
   const totalRoas = t.adsCost > 0 ? t.actualRevenue / t.adsCost : 0;
 
   const dailyRows = rows.map(r => `
     <tr>
       <td><strong>${fmtDate(r.date)}</strong></td>
-      <td class="num" style="border-left: 1px solid var(--border);">${r.orders}</td>
+      <td class="num" style="border-left: 1px solid var(--border);">${r.pancakeOrderCount || 0}</td>
       <td class="num">${r.sentCount}</td>
       <td class="num"><span class="badge info">${r.shippingCount}</span></td>
       <td class="num"><span class="badge success">${r.successCount}</span></td>
@@ -2624,7 +2749,7 @@ function renderDaily() {
   const totalRow = `
     <tr class="total-row">
       <td><strong>TỔNG ${rows.length} ngày</strong></td>
-      <td class="num" style="border-left: 1px solid var(--border);"><strong>${t.orders.toLocaleString('vi-VN')}</strong></td>
+      <td class="num" style="border-left: 1px solid var(--border);"><strong>${t.pancakeOrderCount.toLocaleString('vi-VN')}</strong></td>
       <td class="num"><strong>${t.sentCount.toLocaleString('vi-VN')}</strong></td>
       <td class="num"><strong>${t.shippingCount.toLocaleString('vi-VN')}</strong></td>
       <td class="num"><strong class="pos">${t.successCount.toLocaleString('vi-VN')}</strong></td>
@@ -2650,12 +2775,8 @@ function renderDaily() {
 function renderOrders() {
   let orders = state.orders.slice().sort((a,b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
 
-  // Áp date filter cho mọi trường hợp
-  orders = orders.filter(o => {
-    if (state.dateFrom && o.date < state.dateFrom) return false;
-    if (state.dateTo && o.date > state.dateTo) return false;
-    return true;
-  });
+  // Áp date filter (KHÔNG áp source filter ở đây — vì có status filter riêng)
+  orders = orders.filter(o => isInDateRange(o));
 
   if (state.orderFilter !== 'all') {
     if (state.orderFilter === 'mismatch') {
@@ -2663,36 +2784,29 @@ function renderOrders() {
     } else if (state.orderFilter === 'tc-zero-cod') {
       orders = orders.filter(o => o.status === 'success' && o.actualRevenue === 0);
     } else if (state.orderFilter === 'unknown-vtp') {
-      // Đơn có ở VTP nhưng KHÔNG có ở Pancake (= source 'vtp_only')
-      orders = orders.filter(o => o.source === 'vtp_only');
+      orders = orders.filter(o => isVtpOnlyOrder(o));
     } else if (state.orderFilter === 'from-pancake') {
-      // Tất cả đơn từ Pancake (không tính vtp_only)
-      orders = orders.filter(o => !o.source || o.source === 'pancake' || o.source === 'pancake+vtp');
+      orders = orders.filter(o => isPancakeOrder(o));
     } else if (state.orderFilter === 'sent') {
-      // Đã bắn sang VTP = đơn Pancake có vtpTracking
-      orders = orders.filter(o => o.vtpTracking && o.vtpTracking !== '' && (o.source === 'pancake+vtp' || o.source === 'pancake'));
+      orders = orders.filter(o => isSentToVtp(o));
     } else if (state.orderFilter === 'not-sent') {
-      // Đơn Pancake CHƯA bắn VTP
-      orders = orders.filter(o => (o.source === 'pancake' || !o.source) && (!o.vtpTracking || o.vtpTracking === ''));
+      orders = orders.filter(o => isPancakeOrder(o) && (!o.vtpTracking || o.vtpTracking === ''));
     } else {
       orders = orders.filter(o => o.status === state.orderFilter);
     }
   }
 
-  // Summary counts (theo orders đã filter)
-  // QUAN TRỌNG: phân biệt rõ status:
-  //   - 'shipping' = đang giao (VTP đã lấy hàng, đang trên đường)
-  //   - 'sent' = đã bắn VTP nhưng VTP chưa lấy/chưa cập nhật (mặc định cho đơn có vtpTracking từ Pancake mà chưa có VTP data)
-  //   - 'pending' = chưa có vtpTracking
+  // Summary counts dùng helper chung
+  const k = calcKPIsFromOrders(orders);
   const summaryCounts = {
     total: orders.length,
-    success: orders.filter(o => o.status === 'success').length,
-    partial: orders.filter(o => o.status === 'partial').length,
-    returned: orders.filter(o => o.status === 'returned' || o.status === 'failed').length,
-    shipping: orders.filter(o => o.status === 'shipping').length,  // CHỈ shipping thật, không tính sent
-    sent: orders.filter(o => o.status === 'sent').length,           // Đã bắn nhưng chưa giao
-    pending: orders.filter(o => o.status === 'pending').length,     // Chưa bắn VTP
-    cancelled: orders.filter(o => o.status === 'cancelled').length
+    success: k.successCount,
+    partial: k.partialCount,
+    returned: k.returnedCount,
+    shipping: k.shippingCount,
+    sent: k.sentStatusCount,
+    pending: k.pendingCount,
+    cancelled: k.cancelledCount
   };
   const setSummary = (id, val) => {
     const el = document.getElementById(id);
@@ -2718,27 +2832,25 @@ function renderOrders() {
     pending: ['Chưa bắn VTP', '']
   };
 
-  // Tính tổng cho dòng total row
-  let totalQtySum = 0, totalPancakeRev = 0, totalActualRev = 0, totalCogs = 0, totalShipFee = 0, totalProfit = 0;
+  // Tính tổng cho dòng total row — dùng helper đồng nhất
+  let totalQtySum = 0, totalPancakeRev = 0, totalActualRev = 0, totalCogs = 0, totalShipFee = 0, totalReturnFee = 0, totalProfit = 0;
   const orderCalcs = orders.map(o => {
-    const cogs = o.items.reduce((s,it) => s + it.unitCost * it.qty, 0);
-    const partialCogsOverride = state.partialCogs[o.id];
-    const realCogs = o.status === 'success'
-      ? cogs
-      : (o.status === 'partial'
-          ? ((partialCogsOverride !== undefined && partialCogsOverride !== null && partialCogsOverride !== '')
-              ? Number(partialCogsOverride)
-              : Math.round(cogs * 0.5))
-          : 0);
-    const profit = o.actualRevenue - realCogs - o.shipFee - (o.returnFee || 0);
+    const realCogs = getOrderCOGS(o);
+    const shipFee = getOrderShipFee(o);
+    const returnFee = getOrderReturnFee(o);
+    const actualRev = getOrderActualRevenue(o);
+    const profit = getOrderProfit(o);
     const totalQty = o.items.reduce((s, it) => s + (it.qty || 0), 0);
+
     totalQtySum += totalQty;
-    totalPancakeRev += o.pancakeRevenue || 0;
-    totalActualRev += o.actualRevenue || 0;
+    // pancakeRevenue chỉ tính cho đơn Pancake
+    if (isPancakeOrder(o)) totalPancakeRev += o.pancakeRevenue || 0;
+    totalActualRev += actualRev;
     totalCogs += realCogs;
-    totalShipFee += o.shipFee || 0;
-    if (o.status !== 'cancelled') totalProfit += profit;
-    return { o, realCogs, profit, totalQty };
+    totalShipFee += shipFee;
+    totalReturnFee += returnFee;
+    totalProfit += profit;
+    return { o, realCogs, shipFee, returnFee, actualRev, profit, totalQty };
   });
 
   const tbody = document.getElementById('orders-tbody');
@@ -2751,7 +2863,7 @@ function renderOrders() {
       <td>—</td>
       <td class="num">${fmt(totalActualRev)}</td>
       <td class="num">${fmt(totalCogs)}</td>
-      <td class="num">${fmt(totalShipFee)}</td>
+      <td class="num">${fmt(totalShipFee + totalReturnFee)}</td>
       <td class="num ${totalProfit >= 0 ? 'pos' : 'neg'}">${fmt(totalProfit)}</td>
       <td>—</td>
     </tr>
@@ -2767,10 +2879,10 @@ function renderOrders() {
   const endIdx = Math.min(startIdx + pageSize, orders.length);
   const pagedOrders = orderCalcs.slice(startIdx, endIdx);
 
-  tbody.innerHTML = totalRow + pagedOrders.map(({o, realCogs, profit, totalQty}, i) => {
+  tbody.innerHTML = totalRow + pagedOrders.map(({o, realCogs, shipFee, returnFee, actualRev, profit, totalQty}, i) => {
     const idx = startIdx + i;
     const [label, cls] = statusLabels[o.status];
-    const matched = o.status === 'success' && o.actualRevenue === o.pancakeRevenue;
+    const matched = o.status === 'success' && actualRev === o.pancakeRevenue;
     const productsText = o.items.map(it => `${it.name} ×${it.qty}`).join(', ');
     // Mã Pancake: nếu source là vtp_only thì "—"
     const pancakeCode = (o.source === 'vtp_only')
@@ -2780,6 +2892,10 @@ function renderOrders() {
     const vtpCode = o.vtpTracking
       ? `<span style="font-family: monospace; font-size: 12px;">${o.vtpTracking}</span>`
       : '<span style="color: var(--text-dim);">Chưa bắn</span>';
+    // pancakeRevenue chỉ hiển thị cho đơn Pancake
+    const pancakeRevDisplay = isPancakeOrder(o) ? fmt(o.pancakeRevenue || 0) : '<span style="color: var(--text-dim);">—</span>';
+    // Tổng phí ship hiển thị = shipFee + returnFee (đơn 1 phần / hoàn KTC có thêm phí hoàn)
+    const totalShipDisplay = (shipFee + returnFee) > 0 ? fmt(shipFee + returnFee) : '—';
     return `
       <tr>
         <td>${idx + 1}</td>
@@ -2790,12 +2906,12 @@ function renderOrders() {
         <td><span style="font-family: monospace; font-size: 12px; color: var(--text-muted);">${o.customerPhone || '—'}</span></td>
         <td style="max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${productsText}">${productsText}</td>
         <td class="num">${totalQty}</td>
-        <td class="num">${fmt(o.pancakeRevenue)}</td>
+        <td class="num">${pancakeRevDisplay}</td>
         <td><span class="badge ${cls}">${label}</span></td>
-        <td class="num">${o.actualRevenue > 0 ? fmt(o.actualRevenue) : '—'}</td>
+        <td class="num">${actualRev > 0 ? fmt(actualRev) : '—'}</td>
         <td class="num">${realCogs > 0 ? fmt(realCogs) : '—'}</td>
-        <td class="num">${o.shipFee > 0 ? fmt(o.shipFee) : '—'}</td>
-        <td class="num ${profit >= 0 ? 'pos' : 'neg'}">${o.status === 'cancelled' ? '—' : fmt(profit)}</td>
+        <td class="num">${totalShipDisplay}</td>
+        <td class="num ${profit >= 0 ? 'pos' : 'neg'}">${o.status === 'cancelled' || o.status === 'shipping' || o.status === 'sent' || o.status === 'pending' ? '—' : fmt(profit)}</td>
         <td><span class="recon-status ${o.status === 'success' ? (matched ? 'match' : 'diff') : ''}">${o.status === 'success' ? (matched ? 'Khớp' : 'Lệch') : '—'}</span></td>
       </tr>
     `;
@@ -2918,11 +3034,9 @@ function updateAds(date, field, value) {
 // ============================================================================
 function aggregateByMonth() {
   const months = {};
-  state.orders.forEach(o => {
-    // Áp date filter
-    if (state.dateFrom && o.date < state.dateFrom) return;
-    if (state.dateTo && o.date > state.dateTo) return;
-
+  // Áp main filters (date + source)
+  const filtered = applyMainFilters(state.orders);
+  filtered.forEach(o => {
     const month = o.date.slice(0, 7);
     if (!months[month]) {
       months[month] = {
@@ -2934,41 +3048,20 @@ function aggregateByMonth() {
     const m = months[month];
     m.orders++;
 
-    // Đếm đơn Pancake (có ở Pancake)
-    const isPancake = !o.source || o.source === 'pancake' || o.source === 'pancake+vtp';
-    if (isPancake) {
+    if (isPancakeOrder(o)) {
       m.pancakeOrderCount++;
       m.pancakeRevenue += o.pancakeRevenue || 0;
     }
-
-    // Đếm đơn đã bắn VTP (có vtpTracking)
-    if (o.vtpTracking && o.vtpTracking !== '') {
-      m.sentCount++;
-    }
-
-    // Đang giao
+    if (isSentToVtp(o)) m.sentCount++;
     if (o.status === 'shipping') m.shippingCount++;
 
-    // Doanh thu thực tế: CHỈ tính từ đơn success/partial
-    if (o.status === 'success' || o.status === 'partial') {
-      m.actualRevenue += o.actualRevenue || 0;
-    }
-    // Phí ship: KHÔNG tính cho đơn hủy
-    if (o.status !== 'cancelled') {
-      m.shipFee += o.shipFee || 0;
-      m.returnFee += o.returnFee || 0;
-    }
-    if (o.status === 'success') {
-      m.successCount++;
-      m.cogs += o.items.reduce((s,it) => s + it.unitCost * it.qty, 0);
-    } else if (o.status === 'partial') {
-      m.returnLikeCount++;
-      const fullCogs = o.items.reduce((s,it) => s + it.unitCost * it.qty, 0);
-      const cogsForThisOrder = (state.partialCogs[o.id] !== undefined && state.partialCogs[o.id] !== null && state.partialCogs[o.id] !== '')
-        ? Number(state.partialCogs[o.id])
-        : Math.round(fullCogs * 0.5);
-      m.cogs += cogsForThisOrder;
-    } else if (o.status === 'returned' || o.status === 'failed') m.returnLikeCount++;
+    m.actualRevenue += getOrderActualRevenue(o);
+    m.shipFee += getOrderShipFee(o);
+    m.cogs += getOrderCOGS(o);
+    m.returnFee += getOrderReturnFee(o);
+
+    if (o.status === 'success') m.successCount++;
+    else if (o.status === 'partial' || o.status === 'returned' || o.status === 'failed') m.returnLikeCount++;
     else if (o.status === 'cancelled') m.cancelledCount++;
   });
 
@@ -4072,16 +4165,42 @@ document.querySelectorAll('.pill').forEach(p => {
   });
 });
 
-// Date filter — sync trên cả 4 trang (Dashboard, Daily, By Product, COD)
+// Date filter — sync trên cả 5 trang (Dashboard, Daily, By Product, COD, Orders)
 function syncDateInputs(from, to) {
-  ['date-from', 'date-from-daily', 'date-from-product', 'date-from-cod'].forEach(id => {
+  ['date-from', 'date-from-daily', 'date-from-product', 'date-from-cod', 'date-from-orders'].forEach(id => {
     const el = document.getElementById(id);
     if (el && el.value !== from) el.value = from || '';
   });
-  ['date-to', 'date-to-daily', 'date-to-product', 'date-to-cod'].forEach(id => {
+  ['date-to', 'date-to-daily', 'date-to-product', 'date-to-cod', 'date-to-orders'].forEach(id => {
     const el = document.getElementById(id);
     if (el && el.value !== to) el.value = to || '';
   });
+}
+
+// Toggle dropdown "more filters"
+function toggleMoreFilters(e) {
+  if (e) e.stopPropagation();
+  const dropdown = document.getElementById('more-filters-dropdown');
+  if (!dropdown) return;
+  const isOpen = dropdown.style.display === 'block';
+  dropdown.style.display = isOpen ? 'none' : 'block';
+}
+// Đóng dropdown khi click bên ngoài
+document.addEventListener('click', (e) => {
+  const dropdown = document.getElementById('more-filters-dropdown');
+  const btn = document.getElementById('more-filters-btn');
+  if (!dropdown || dropdown.style.display === 'none') return;
+  if (e.target === btn || dropdown.contains(e.target) || (e.target.closest && e.target.closest('#more-filters-btn'))) return;
+  dropdown.style.display = 'none';
+});
+
+// Set source filter (Tổng / Pancake / VTP only) — chỉ áp ở Dashboard
+function setSourceFilter(src) {
+  state.sourceFilter = src;
+  document.querySelectorAll('[data-source]').forEach(b => {
+    b.classList.toggle('active', b.dataset.source === src);
+  });
+  renderAll();
 }
 
 // Quick date filter — set ngày theo preset
@@ -4124,17 +4243,20 @@ function setQuickDate(preset, btnEl) {
   state.dateTo = to;
   state.quickDatePreset = preset;
   syncDateInputs(from, to);
-  // Update active class trên TẤT CẢ pill (kể cả ở các trang khác)
-  document.querySelectorAll('.quick-date-bar .pill').forEach(b => {
+  // Update active class trên TẤT CẢ pills có data-preset (kể cả ở sticky bar)
+  document.querySelectorAll('[data-preset]').forEach(b => {
     b.classList.toggle('active', b.dataset.preset === preset && preset !== 'all');
   });
+  // Đóng dropdown more filters nếu đang mở
+  const dropdown = document.getElementById('more-filters-dropdown');
+  if (dropdown) dropdown.style.display = 'none';
   // Reset trang về 1 khi đổi date
   state.orderPage = 1;
   renderAll();
 }
 
 function bindDateInputs() {
-  ['date-from', 'date-from-daily', 'date-from-product', 'date-from-cod'].forEach(id => {
+  ['date-from', 'date-from-daily', 'date-from-product', 'date-from-cod', 'date-from-orders'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('change', (e) => {
@@ -4143,7 +4265,7 @@ function bindDateInputs() {
       renderAll();
     });
   });
-  ['date-to', 'date-to-daily', 'date-to-product', 'date-to-cod'].forEach(id => {
+  ['date-to', 'date-to-daily', 'date-to-product', 'date-to-cod', 'date-to-orders'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('change', (e) => {
@@ -4189,7 +4311,8 @@ function parseVtpPayoutPaste(text) {
 
     const numbers = [];
     for (const p of parts) {
-      const cleaned = p.replace(/[đ,\s'"]/g, '').replace(/[\.](?=\d{3})/g, '');
+      // Clean: bỏ ký tự tiền tệ (đ, ₫), khoảng trắng, dấu nháy, dấu chấm phân cách
+      const cleaned = p.replace(/[đ₫,\s'"]/g, '').replace(/[\.](?=\d{3})/g, '');
       if (/^\d{3,}$/.test(cleaned)) numbers.push(parseInt(cleaned));
     }
     let codAmount = 0, feeAmount = 0, netAmount = 0;
