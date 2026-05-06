@@ -2238,14 +2238,9 @@ function generateSampleData(silent) {
 
 // Phân loại nguồn đơn
 function isPancakeOrder(o) {
-  // Đơn Pancake THẬT phải có source được set rõ ràng là 'pancake' hoặc 'pancake+vtp'
-  // VÀ phải có mã đơn Pancake (pancakeOrderRef = cột "Mã đơn hàng đầy đủ" từ Sheet)
-  if (o.source === 'pancake' || o.source === 'pancake+vtp') {
-    // Đơn có source đúng — coi là đơn Pancake
-    return true;
-  }
-  // Đơn cũ không có source (data legacy) — KHÔNG tính là Pancake để tránh đếm nhầm
-  return false;
+  // Đơn Pancake THẬT phải có pancakeOrderRef = mã đơn hàng đầy đủ từ Sheet Pancake
+  // KHÔNG dựa vào source vì source có thể bị set nhầm do match nhầm vtpTracking
+  return !!(o.pancakeOrderRef && String(o.pancakeOrderRef).trim() !== '');
 }
 function isVtpOnlyOrder(o) {
   return o.source === 'vtp_only';
