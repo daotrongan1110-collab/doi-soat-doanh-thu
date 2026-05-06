@@ -2232,7 +2232,14 @@ function generateSampleData(silent) {
 
 // Phân loại nguồn đơn
 function isPancakeOrder(o) {
-  return !o.source || o.source === 'pancake' || o.source === 'pancake+vtp';
+  // Đơn Pancake THẬT phải có source được set rõ ràng là 'pancake' hoặc 'pancake+vtp'
+  // VÀ phải có mã đơn Pancake (pancakeOrderRef = cột "Mã đơn hàng đầy đủ" từ Sheet)
+  if (o.source === 'pancake' || o.source === 'pancake+vtp') {
+    // Đơn có source đúng — coi là đơn Pancake
+    return true;
+  }
+  // Đơn cũ không có source (data legacy) — KHÔNG tính là Pancake để tránh đếm nhầm
+  return false;
 }
 function isVtpOnlyOrder(o) {
   return o.source === 'vtp_only';
@@ -2376,8 +2383,9 @@ function calcKPIsFromOrders(orders) {
 
 function aggregateByDay() {
   const days = {};
-  // Áp filter chính (date + source)
-  const filtered = applyMainFilters(state.orders);
+  // Báo cáo theo ngày/tháng: CHỈ áp date filter, KHÔNG áp source filter
+  // (source filter chỉ dùng ở Dashboard để user xem theo góc nhìn khác)
+  const filtered = state.orders.filter(o => isInDateRange(o));
   filtered.forEach(o => {
     if (!days[o.date]) {
       days[o.date] = {
@@ -3034,8 +3042,8 @@ function updateAds(date, field, value) {
 // ============================================================================
 function aggregateByMonth() {
   const months = {};
-  // Áp main filters (date + source)
-  const filtered = applyMainFilters(state.orders);
+  // Báo cáo theo tháng: CHỈ áp date filter, KHÔNG áp source filter
+  const filtered = state.orders.filter(o => isInDateRange(o));
   filtered.forEach(o => {
     const month = o.date.slice(0, 7);
     if (!months[month]) {
@@ -5381,6 +5389,36 @@ function applyVTPDataToOrders(vtpOrders) {
 
   // Cập nhật buffer: chỉ giữ 1P1 vẫn còn mồ côi (giới hạn 100 cái cuối, tránh phình to)
   state.orphan1P1Buffer = newOrphans.slice(-100);
+
+  // ===== BƯỚC 3: Re-scan toàn bộ orders =====
+  // Sau mỗi lần upload, quét lại TẤT CẢ orders để tìm cặp đơn gốc ↔ 1P1
+  // Giải quyết trường hợp 1P1 được upload trước đơn gốc ở lần khác
+  const trackingToIdx = {};
+  state.orders.forEach((o, idx) => {
+    if (o.vtpTracking) trackingToIdx[o.vtpTracking] = idx;
+  });
+
+  // Tìm tất cả đơn 1P1 đã có trong orders (vtp_only source hoặc đã merge)
+  state.orders.forEach(o => {
+    if (!o.vtpTracking || !/1P1$/i.test(o.vtpTracking)) return;
+    // Đây là đơn 1P1 — tìm đơn gốc
+    const parentTracking = o.vtpTracking.replace(/1P1$/i, '');
+    const parentIdx = trackingToIdx[parentTracking];
+    if (parentIdx !== undefined) {
+      const parent = state.orders[parentIdx];
+      // Nếu đơn gốc vẫn là success (chưa được mark partial) → mark lại
+      if (parent.status === 'success') {
+        parent.status = 'partial';
+        parent.partialDetectionReasons = ['has_return_shipment_1p1'];
+        parent.returnFee = o.shipFee || 5000;
+        parent.partialReturnTracking = o.vtpTracking;
+        // vtpReturnStatus dựa vào trạng thái đơn 1P1
+        const rsRaw = (o.vtpRawStatus || '').toLowerCase();
+        parent.vtpReturnStatus = (rsRaw.includes('giao thành công') || rsRaw.includes('đã trả')) ? 'returned' : 'returning';
+        stats.partialDetected = (stats.partialDetected || 0) + 1;
+      }
+    }
+  });
 
   return stats;
 }
