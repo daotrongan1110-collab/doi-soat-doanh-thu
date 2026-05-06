@@ -1928,6 +1928,7 @@ const state = {
   unknownCodes: [],
   partialCogs: {},
   orphan1P1Buffer: [],  // Lưu các 1P1 mồ côi để match ở lần upload sau
+  known1P1Map: {},      // Tất cả 1P1 đã biết {tracking: {ship_fee, status, receiver_phone}}
   lastUpdate: {
     vtp: null,      // ISO string lần upload Excel VTP
     pancake: null,  // ISO string lần sync Pancake
@@ -2020,6 +2021,10 @@ async function loadState() {
     if (ob) state.orphan1P1Buffer = JSON.parse(ob);
   } catch(e) {}
   try {
+    const km = localStorage.getItem('doi-soat-known-1p1');
+    if (km) state.known1P1Map = JSON.parse(km);
+  } catch(e) {}
+  try {
     const lu = localStorage.getItem('doi-soat-last-update');
     if (lu) {
       // Backward compat: cũ là string, mới là object
@@ -2060,6 +2065,7 @@ async function saveState() {
   try { localStorage.setItem('doi-soat-unknown-codes', JSON.stringify(state.unknownCodes)); } catch(e){}
   try { localStorage.setItem('doi-soat-partial-cogs', JSON.stringify(state.partialCogs)); } catch(e){}
   try { localStorage.setItem('doi-soat-orphan-1p1', JSON.stringify(state.orphan1P1Buffer)); } catch(e){}
+  try { localStorage.setItem('doi-soat-known-1p1', JSON.stringify(state.known1P1Map || {})); } catch(e){}
   try { if (state.lastUpdate) localStorage.setItem('doi-soat-last-update', JSON.stringify(state.lastUpdate)); } catch(e){}
   try { if (state.lastUpdateSummary) localStorage.setItem('doi-soat-last-update-summary', JSON.stringify(state.lastUpdateSummary)); } catch(e){}
   try { localStorage.setItem('doi-soat-settings', JSON.stringify(state.settings)); } catch(e){}
@@ -3990,7 +3996,7 @@ function exportCSV() {
 
 async function resetAll() {
   if (!confirm('Xóa toàn bộ dữ liệu? Không thể hoàn tác.\n\n(App sẽ trống hoàn toàn, không tạo lại dữ liệu mẫu)')) return;
-  state.products = []; state.orders = []; state.ads = []; state.fixedCosts = []; state.codReceived = {}; state.returnsReceived = {}; state.unknownCodes = []; state.payouts = []; state.partialCogs = {}; state.orphan1P1Buffer = [];
+  state.products = []; state.orders = []; state.ads = []; state.fixedCosts = []; state.codReceived = {}; state.returnsReceived = {}; state.unknownCodes = []; state.payouts = []; state.partialCogs = {}; state.orphan1P1Buffer = []; state.known1P1Map = {};
   try {
     localStorage.removeItem('doi-soat-products');
     localStorage.removeItem('doi-soat-orders');
@@ -5269,9 +5275,6 @@ function applyVTPDataToOrders(vtpOrders) {
   const mainVtpOrders = vtpOrders.filter(v => !/1P1$/i.test(v.tracking));
   const returnVtpOrders = vtpOrders.filter(v => /1P1$/i.test(v.tracking));
 
-  // Gộp 1P1 từ file mới + 1P1 mồ côi từ lần upload trước (nếu có)
-  const allReturnShipments = [...returnVtpOrders, ...(state.orphan1P1Buffer || [])];
-
   // ===== BƯỚC 1: Upsert đơn chính =====
   mainVtpOrders.forEach(v => {
     const existingIdx = ordersByTracking[v.tracking];
@@ -5287,12 +5290,15 @@ function applyVTPDataToOrders(vtpOrders) {
       });
 
       o.status = appStatus;
-      o.vtpRawStatus = v.status;  // Lưu status thô từ VTP để phân biệt "Đã trả" vs "Đang chuyển hoàn"
+      o.vtpRawStatus = v.status;
       o.actualRevenue = v.cod_collected;
       o.shipFee = v.ship_fee;
       o.codFixedOnVtp = v.cod_collected !== v.order_value;
-      // Đánh dấu source: đơn này có ở cả Pancake và VTP
-      o.source = 'pancake+vtp';
+      // Source: CHỈ đổi thành pancake+vtp nếu đơn đã từ Pancake
+      // Nếu đơn là vtp_only → GIỮ NGUYÊN vtp_only (vì vẫn chưa có ở Pancake)
+      if (o.source !== 'vtp_only') {
+        o.source = 'pancake+vtp';
+      }
 
       const after = JSON.stringify({
         status: o.status,
@@ -5334,10 +5340,35 @@ function applyVTPDataToOrders(vtpOrders) {
     }
   });
 
-  // ===== BƯỚC 2: Xử lý đơn 1P1 (gồm cả file mới + buffer mồ côi cũ) =====
-  const newOrphans = [];  // 1P1 vẫn không tìm được đơn gốc (giữ cho lần sau)
+  // ===== BƯỚC 2: Xử lý đơn 1P1 =====
+  // Gộp 1P1 từ file mới + 1P1 mồ côi từ lần upload trước + 1P1 đã biết
+  // Lưu TẤT CẢ 1P1 đã biết vào known1P1Map (persistent) để re-scan mỗi lần upload
+  if (!state.known1P1Map) state.known1P1Map = {};  // key: tracking 1P1, value: {tracking, ship_fee, status, receiver_phone}
 
-  allReturnShipments.forEach(rs => {
+  // Thêm 1P1 từ file hiện tại vào known map
+  returnVtpOrders.forEach(rs => {
+    state.known1P1Map[rs.tracking] = {
+      tracking: rs.tracking,
+      ship_fee: rs.ship_fee,
+      status: rs.status,
+      receiver_phone: rs.receiver_phone
+    };
+  });
+  // Thêm 1P1 từ orphan buffer cũ vào known map
+  (state.orphan1P1Buffer || []).forEach(rs => {
+    if (!state.known1P1Map[rs.tracking]) {
+      state.known1P1Map[rs.tracking] = {
+        tracking: rs.tracking,
+        ship_fee: rs.ship_fee,
+        status: rs.status,
+        receiver_phone: rs.receiver_phone
+      };
+    }
+  });
+
+  // Quét TẤT CẢ 1P1 đã biết (không chỉ file hiện tại) và match với đơn gốc
+  const newOrphans = [];
+  Object.values(state.known1P1Map).forEach(rs => {
     // Tìm đơn gốc: bỏ "1P1" cuối
     const originalTracking = rs.tracking.replace(/1P1$/i, '');
     let originalIdx = ordersByTracking[originalTracking];
@@ -5354,71 +5385,36 @@ function applyVTPDataToOrders(vtpOrders) {
 
     if (originalIdx !== undefined) {
       const original = state.orders[originalIdx];
-      // Đánh dấu đơn gốc là partial
-      original.status = 'partial';
-      original.partialDetectionReasons = ['has_return_shipment_1p1'];
-      original.codFixedOnVtp = original.actualRevenue !== original.pancakeRevenue;
-      // PHÍ HOÀN của đơn 1 phần = phí ship của đơn 1P1 (VTP gửi phần hàng còn lại về kho)
-      original.returnFee = rs.ship_fee || 0;
-      original.partialReturnTracking = rs.tracking;  // lưu để debug
-      // Cập nhật vtpReturnStatus dựa vào status thật của đơn 1P1
-      const rsStatus = (rs.status || '').toLowerCase().trim();
-      if (rsStatus === 'đã trả' || rsStatus.includes('hoàn về kho') ||
-          rsStatus.includes('giao thành công')) {
-        // 1P1 status "Giao thành công" = đã giao về cho shop = đã hoàn xong
-        original.vtpReturnStatus = 'returned';
-      } else {
-        original.vtpReturnStatus = 'returning'; // còn đang trên đường
+      // Chỉ mark nếu đơn gốc CHƯA là partial (tránh mark trùng)
+      if (original.status !== 'partial') {
+        original.status = 'partial';
+        original.partialDetectionReasons = ['has_return_shipment_1p1'];
+        original.codFixedOnVtp = original.actualRevenue !== original.pancakeRevenue;
+        original.returnFee = rs.ship_fee || 0;
+        original.partialReturnTracking = rs.tracking;
+        const rsStatus = (rs.status || '').toLowerCase().trim();
+        if (rsStatus === 'đã trả' || rsStatus.includes('hoàn về kho') ||
+            rsStatus.includes('giao thành công')) {
+          original.vtpReturnStatus = 'returned';
+        } else {
+          original.vtpReturnStatus = 'returning';
+        }
+        original.partialReturnStatus = rs.status;
+        stats.partialDetected++;
+        stats.partialList.push({
+          original: original.vtpTracking,
+          return: rs.tracking,
+          revenue: original.actualRevenue,
+          returnFee: rs.ship_fee || 0
+        });
       }
-      // Lưu status thô của đơn 1P1 đi kèm để hiển thị
-      original.partialReturnStatus = rs.status;
-      stats.partialDetected++;
-      stats.partialList.push({
-        original: original.vtpTracking,
-        return: rs.tracking,
-        revenue: original.actualRevenue,
-        returnFee: rs.ship_fee || 0
-      });
     } else {
-      stats.orphanReturns++;
-      stats.orphanList.push(rs.tracking);
-      // Lưu lại cho lần upload sau
       newOrphans.push(rs);
     }
   });
 
-  // Cập nhật buffer: chỉ giữ 1P1 vẫn còn mồ côi (giới hạn 100 cái cuối, tránh phình to)
+  // Cập nhật orphan buffer: chỉ giữ 1P1 vẫn chưa tìm được đơn gốc
   state.orphan1P1Buffer = newOrphans.slice(-100);
-
-  // ===== BƯỚC 3: Re-scan toàn bộ orders =====
-  // Sau mỗi lần upload, quét lại TẤT CẢ orders để tìm cặp đơn gốc ↔ 1P1
-  // Giải quyết trường hợp 1P1 được upload trước đơn gốc ở lần khác
-  const trackingToIdx = {};
-  state.orders.forEach((o, idx) => {
-    if (o.vtpTracking) trackingToIdx[o.vtpTracking] = idx;
-  });
-
-  // Tìm tất cả đơn 1P1 đã có trong orders (vtp_only source hoặc đã merge)
-  state.orders.forEach(o => {
-    if (!o.vtpTracking || !/1P1$/i.test(o.vtpTracking)) return;
-    // Đây là đơn 1P1 — tìm đơn gốc
-    const parentTracking = o.vtpTracking.replace(/1P1$/i, '');
-    const parentIdx = trackingToIdx[parentTracking];
-    if (parentIdx !== undefined) {
-      const parent = state.orders[parentIdx];
-      // Nếu đơn gốc vẫn là success (chưa được mark partial) → mark lại
-      if (parent.status === 'success') {
-        parent.status = 'partial';
-        parent.partialDetectionReasons = ['has_return_shipment_1p1'];
-        parent.returnFee = o.shipFee || 5000;
-        parent.partialReturnTracking = o.vtpTracking;
-        // vtpReturnStatus dựa vào trạng thái đơn 1P1
-        const rsRaw = (o.vtpRawStatus || '').toLowerCase();
-        parent.vtpReturnStatus = (rsRaw.includes('giao thành công') || rsRaw.includes('đã trả')) ? 'returned' : 'returning';
-        stats.partialDetected = (stats.partialDetected || 0) + 1;
-      }
-    }
-  });
 
   return stats;
 }
