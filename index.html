@@ -2436,7 +2436,7 @@ function aggregateByDay() {
     return s;
   }, 0));
 
-  const rows = Object.values(days).sort((a,b) => a.date.localeCompare(b.date));
+  const rows = Object.values(days).sort((a,b) => b.date.localeCompare(a.date));
   rows.forEach(r => {
     const ad = adsMap[r.date] || { cost: 0, ordersFromAds: 0 };
     r.adsCost = ad.cost;
@@ -3087,7 +3087,7 @@ function aggregateByMonth() {
     return s;
   }, 0);
 
-  const rows = Object.values(months).sort((a,b) => a.month.localeCompare(b.month));
+  const rows = Object.values(months).sort((a,b) => b.month.localeCompare(a.month));
   rows.forEach(r => {
     r.adsCost = adsByMonth[r.month] || 0;
     r.fixedCost = Math.round(monthlyFixedCost);
@@ -4992,21 +4992,45 @@ function setupAutoSync() {
     clearInterval(pancakeAutoSyncTimer);
     pancakeAutoSyncTimer = null;
   }
-  // Bật timer mới nếu auto-sync ON và có URL
-  if (state.settings && state.settings.pancakeAutoSync && state.settings.pancakeSheetUrl) {
+  // Bật timer mới nếu auto-sync ON và có ít nhất 1 shop có URL
+  const shops = (state.settings && state.settings.pancakeSheets) || [];
+  const hasValidShop = shops.some(s => s && s.url && s.url.trim());
+  if (state.settings && state.settings.pancakeAutoSync && hasValidShop) {
     const intervalMs = (state.settings.pancakeAutoSyncInterval || 5) * 60 * 1000;
     pancakeAutoSyncTimer = setInterval(() => {
       console.log('[AutoSync] Đang đồng bộ Pancake định kỳ...');
       syncPancakeFromSheet(true);  // silent mode
     }, intervalMs);
+    console.log('[AutoSync] Timer đã bật, interval =', state.settings.pancakeAutoSyncInterval || 5, 'phút');
+  } else {
+    console.log('[AutoSync] Timer không bật (auto-sync off hoặc chưa có shop có URL)');
   }
+}
+
+// Toggle auto-sync khi user tick checkbox hoặc đổi interval
+function togglePancakeAutoSync() {
+  const checkbox = document.getElementById('pancake-auto-sync');
+  const intervalSelect = document.getElementById('pancake-auto-sync-interval');
+  if (!state.settings) state.settings = {};
+  if (checkbox) {
+    state.settings.pancakeAutoSync = !!checkbox.checked;
+  }
+  if (intervalSelect) {
+    const v = parseInt(intervalSelect.value, 10);
+    if (!isNaN(v) && v > 0) state.settings.pancakeAutoSyncInterval = v;
+  }
+  saveState();
+  setupAutoSync();
+  updateNextSyncDisplay();
 }
 
 // Hiển thị thời gian sync tiếp theo
 function updateNextSyncDisplay() {
   const el = document.getElementById('pancake-next-sync');
   if (!el) return;
-  if (state.settings && state.settings.pancakeAutoSync && state.settings.pancakeSheetUrl) {
+  const shops = (state.settings && state.settings.pancakeSheets) || [];
+  const hasValidShop = shops.some(s => s && s.url && s.url.trim());
+  if (state.settings && state.settings.pancakeAutoSync && hasValidShop) {
     const interval = state.settings.pancakeAutoSyncInterval || 5;
     if (lastAutoSyncTime) {
       const last = new Date(lastAutoSyncTime);
@@ -5604,8 +5628,10 @@ function processFacebookRows(rows) {
   await loadState();
   renderAll();
 
-  // Tự động đồng bộ Pancake nếu đã bật và có URL
-  if (state.settings && state.settings.pancakeAutoSync && state.settings.pancakeSheetUrl) {
+  // Tự động đồng bộ Pancake nếu đã bật và có ít nhất 1 shop có URL
+  const shops = (state.settings && state.settings.pancakeSheets) || [];
+  const hasValidShop = shops.some(s => s && s.url && s.url.trim());
+  if (state.settings && state.settings.pancakeAutoSync && hasValidShop) {
     // Sync ngay khi mở app (silent)
     setTimeout(() => {
       console.log('[AutoSync] Đang đồng bộ Pancake lần đầu khi mở app...');
